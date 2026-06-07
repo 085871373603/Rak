@@ -181,7 +181,6 @@
             dataRak = [];
             snapshot.forEach((child) => { dataRak.push({ id: child.key, ...child.val() }); });
             document.getElementById('stat-total-rak').innerText = dataRak.length;
-            // Jika data alokasi sudah ada, render ulang untuk update status kebersihan live
             if (hasilAlokasiGlobal.length > 0) renderTabelAlokasi(hasilAlokasiGlobal);
         });
 
@@ -322,7 +321,6 @@
                         else if(kode.startsWith('KAU') || kode.startsWith('KU')) bgColor = '#F8BBD0'; 
                         else if(kode.startsWith('AU') || k.includes('CHILLER')) bgColor = '#BBDEFB'; 
                         
-                        // Cek status kebersihan live dari database master rak (dataRak)
                         let liveRak = dataRak.find(r => r.id === rak.id) || rak;
                         let isBersih = false;
                         if (liveRak.lastCleaned && (WAKTU_SEKARANG - liveRak.lastCleaned) < TUJUH_HARI_MS) {
@@ -427,13 +425,17 @@
 
         document.getElementById('btn-cancel-edit').addEventListener('click', () => { editModal.style.display = 'none'; });
 
+        // ==========================================
+        // CETAK SEMUA LABEL KE PDF (48x30mm)
+        // ==========================================
         document.getElementById('btn-download-pdf').addEventListener('click', () => {
             if(hasilAlokasiGlobal.length === 0) return alert("Belum ada data! Silakan analisa atau simpan dulu.");
             
+            // Setting Kertas: Lebar 48mm x Tinggi 30mm
             const doc = new jsPDF({
                 orientation: 'landscape',
                 unit: 'mm',
-                format: [48, 25] 
+                format: [48, 30] 
             });
 
             let isFirstPage = true;
@@ -442,40 +444,51 @@
             hasilAlokasiGlobal.forEach(pic => {
                 if(pic.assignedRacks && pic.assignedRacks.length > 0) {
                     pic.assignedRacks.forEach(rak => {
-                        if (!isFirstPage) doc.addPage([48, 25], 'landscape');
+                        // Tambah halaman baru (kecuali halaman pertama)
+                        if (!isFirstPage) doc.addPage([48, 30], 'landscape');
                         isFirstPage = false;
 
+                        // URL Barcode
                         const qrUrl = `${baseUrl}?id_rak=${rak.id}&pic=${pic.id}`;
                         const qr = new QRious({ value: qrUrl, size: 200, level: 'L' });
                         const qrDataUrl = qr.toDataURL('image/jpeg');
 
-                        doc.addImage(qrDataUrl, 'JPEG', 2, 2.5, 20, 20);
+                        // 1. Posisi QR Code: Geser rapat ke kiri (X=1) dan ditengah (Y=4), Ukuran (22x22mm)
+                        doc.addImage(qrDataUrl, 'JPEG', 1, 4, 22, 22);
 
                         doc.setTextColor(0, 0, 0);
+                        
+                        // 2. Kode Rak: Geser ke kiri (X=24)
                         doc.setFont("helvetica", "bold");
-                        doc.setFontSize(13);
-                        doc.text(rak.kode_rak || 'RAK', 24, 7);
+                        doc.setFontSize(14); 
+                        doc.text(rak.kode_rak || 'RAK', 24, 10);
 
+                        // 3. Lorong
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(7);
                         let lorong = rak.lorong ? `Loc: ${rak.lorong}` : "Loc: -";
-                        doc.text(lorong, 24, 11);
+                        // Potong teks lorong jika kepanjangan agar tidak nyangkut pinggir
+                        if(lorong.length > 15) lorong = lorong.substring(0, 15) + '..';
+                        doc.text(lorong, 24, 14);
 
+                        // 4. Garis Pembatas (Dari X=24 sampai X=46)
                         doc.setLineWidth(0.3);
-                        doc.line(24, 13, 46, 13);
+                        doc.line(24, 16, 46, 16);
 
+                        // 5. Title PIC
                         doc.setFontSize(6);
-                        doc.text("PIC:", 24, 17);
+                        doc.text("PIC:", 24, 20);
 
+                        // 6. Nama PIC
                         doc.setFont("helvetica", "bold");
                         doc.setFontSize(9);
-                        let picName = pic.nama.length > 15 ? pic.nama.substring(0, 15) + "..." : pic.nama;
-                        doc.text(picName, 24, 21);
+                        let picName = pic.nama.length > 13 ? pic.nama.substring(0, 13) + "..." : pic.nama;
+                        doc.text(picName, 24, 25);
                     });
                 }
             });
 
-            doc.save("Label_Rak_Toko_48x25.pdf");
+            doc.save("Label_Rak_48x30.pdf");
         });
 
         document.getElementById('btn-save-firebase').addEventListener('click', async () => {
@@ -493,4 +506,4 @@
         });
     </script>
 </body>
-</html>
+                                                           </html>
