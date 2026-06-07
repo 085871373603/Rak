@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beranda - Monitor Kebersihan</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: #E0E0E0; color: #000; padding-bottom: 80px; }
+        
+        header { 
+            background-color: #000080; 
+            color: #FFF; 
+            padding: 15px; 
+            text-align: center; 
+            font-size: 16px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+            border-bottom: 4px solid #D32F2F; 
+            position: sticky; 
+            top: 0; 
+            z-index: 100; 
+        }
+
+        .container { padding: 15px; }
+
+        /* Widget Summary */
+        .summary-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .summary-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; border: 2px solid #000; box-shadow: 2px 2px 0px #888; font-weight: bold; }
+        .summary-kotor { background-color: #FFCDD2; color: #C62828; }
+        .summary-bersih { background-color: #C8E6C9; color: #2E7D32; }
+        .summary-card h2 { font-size: 24px; margin-bottom: 5px; color: #000; }
+        .summary-card p { font-size: 11px; text-transform: uppercase; }
+
+        /* Section Titles */
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 20px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #000;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Grid Rak */
+        .store-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+        .rak-card {
+            padding: 12px 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            color: white;
+            border: 2px solid #111;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+        }
+
+        .rak-card .pic-name {
+            font-size: 10px;
+            margin-top: 6px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.9);
+            color: #000;
+            padding: 3px;
+            border-radius: 4px;
+            border: 1px solid #000;
+        }
+
+        .rak-card .timer-text {
+            font-size: 9px;
+            margin-top: 5px;
+            background: rgba(0,0,0,0.3);
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .bg-bersih { background-color: #2E7D32; } 
+        .bg-kotor { background-color: #C62828; } 
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background-color: #FFF;
+            border-top: 2px solid #000;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .nav-item { text-decoration: none; color: #555; font-size: 11px; display: flex; flex-direction: column; align-items: center; font-weight: bold; }
+        .nav-item.active { color: #000080; }
+        .nav-icon { font-size: 18px; margin-bottom: 2px; }
+
+        #loading { text-align: center; padding: 20px; font-weight: bold; color: #666; font-size: 12px;}
+    </style>
+</head>
+<body>
+
+    <header>Dashboard Monitoring</header>
+
+    <div class="container">
+        
+        <div class="summary-box">
+            <div class="summary-card summary-kotor">
+                <h2 id="count-kotor">0</h2>
+                <p>Rak Kotor</p>
+            </div>
+            <div class="summary-card summary-bersih">
+                <h2 id="count-bersih">0</h2>
+                <p>Rak Bersih</p>
+            </div>
+        </div>
+
+        <div id="loading">Memuat status kebersihan...</div>
+
+        <h3 class="section-title" style="color: #C62828;">🚨 Area Prioritas (Kotor)</h3>
+        <div class="store-layout" id="layout-kotor"></div>
+
+        <h3 class="section-title" style="color: #2E7D32; margin-top: 25px;">✅ Area Aman (Bersih)</h3>
+        <div class="store-layout" id="layout-bersih"></div>
+
+    </div>
+
+    <div class="bottom-nav">
+        <a href="Beranda.html" class="nav-item active"><span class="nav-icon">🏠</span>Beranda</a>
+        <a href="Tugas.html" class="nav-item"><span class="nav-icon">📝</span>Tugas</a>
+        <a href="Master.html" class="nav-item"><span class="nav-icon">⚙️</span>Master</a>
+        <a href="Alokasi.html" class="nav-item"><span class="nav-icon">📊</span>Alokasi</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
+            authDomain: "rak1-eabff.firebaseapp.com",
+            databaseURL: "https://rak1-eabff-default-rtdb.firebaseio.com",
+            projectId: "rak1-eabff",
+            storageBucket: "rak1-eabff.firebasestorage.app",
+            messagingSenderId: "422926040763",
+            appId: "1:422926040763:web:4ddf6163969a276d62f39e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const layoutKotor = document.getElementById('layout-kotor');
+        const layoutBersih = document.getElementById('layout-bersih');
+        const loadingIndicator = document.getElementById('loading');
+
+        // Mengambil data jadwal alokasi
+        onValue(ref(db, 'alokasi'), (snapshot) => {
+            loadingIndicator.style.display = 'none';
+            layoutKotor.innerHTML = ''; 
+            layoutBersih.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                layoutKotor.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:12px;">Belum ada jadwal alokasi.</p>';
+                return;
+            }
+
+            const dataAlokasi = snapshot.val();
+            let rakKotor = [];
+            let rakBersih = [];
+
+            // Membongkar data rak
+            Object.keys(dataAlokasi).forEach(picKey => {
+                let pic = dataAlokasi[picKey];
+                if (pic.assignedRacks) {
+                    pic.assignedRacks.forEach(rak => {
+                        
+                        // Cek Logika 7 Hari
+                        let isKotor = true;
+                        let infoWaktu = 'Waktunya Dibersihkan';
+
+                        if (rak.status === 'bersih' && rak.tanggal_bersih) {
+                            const tglBersih = new Date(rak.tanggal_bersih);
+                            const sekarang = new Date();
+                            const selisihHari = Math.floor((sekarang.getTime() - tglBersih.getTime()) / (1000 * 3600 * 24));
+
+                            if (selisihHari < 7) {
+                                isKotor = false;
+                                infoWaktu = `Sisa ${7 - selisihHari} Hari`;
+                            }
+                        }
+
+                        const rakObj = {
+                            ...rak,
+                            nama_pic: pic.nama,
+                            infoWaktu: infoWaktu
+                        };
+
+                        if (isKotor) {
+                            rakKotor.push(rakObj);
+                        } else {
+                            rakBersih.push(rakObj);
+                        }
+                    });
+                }
+            });
+
+            // Update Widget Angka
+            document.getElementById('count-kotor').innerText = rakKotor.length;
+            document.getElementById('count-bersih').innerText = rakBersih.length;
+
+            // Render Kartu Merah (Kotor)
+            if (rakKotor.length === 0) {
+                layoutKotor.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:11px;">Semua rak dalam keadaan bersih! 🎉</p>';
+            } else {
+                rakKotor.forEach(rak => {
+                    layoutKotor.appendChild(createRakCard(rak, 'bg-kotor'));
+                });
+            }
+
+            // Render Kartu Hijau (Bersih)
+            if (rakBersih.length === 0) {
+                layoutBersih.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:11px;">Belum ada rak yang dibersihkan.</p>';
+            } else {
+                rakBersih.forEach(rak => {
+                    layoutBersih.appendChild(createRakCard(rak, 'bg-bersih'));
+                });
+            }
+
+        }, (error) => {
+            console.error("Gagal mengambil data: ", error);
+            loadingIndicator.innerText = "Gagal memuat data.";
+        });
+
+        // Fungsi pembuat elemen kartu HTML
+        function createRakCard(rak, statusClass) {
+            const card = document.createElement('div');
+            card.className = `rak-card ${statusClass}`;
+            card.innerHTML = `
+                <div style="font-size: 15px;">${rak.kode_rak || rak.nama_rak || 'Rak'}</div>
+                <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">📍 ${rak.lorong || '-'}</div>
+                <div class="pic-name">PIC: ${rak.nama_pic}</div>
+                <div class="timer-text">⏳ ${rak.infoWaktu}</div>
+            `;
+            return card;
+        }
+
+    </script>
+</body>
+</html>

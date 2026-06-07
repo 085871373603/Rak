@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alokasi Cerdas - Kebersihan Rak</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: #E0E0E0; color: #000; padding-bottom: 80px; }
+        header { background-color: #000080; color: #FFF; padding: 15px; text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase; border-bottom: 4px solid #D32F2F; position: sticky; top: 0; z-index: 100; }
+        .container { padding: 15px; }
+        .control-panel { background: #FFF; border: 2px solid #000; padding: 15px; margin-bottom: 15px; box-shadow: 2px 2px 0px #888; }
+        .stats-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .stat-card { background: #FFF9C4; border: 1px solid #000; padding: 10px; text-align: center; }
+        .stat-card h3 { font-size: 20px; color: #D32F2F; }
+        .stat-card p { font-size: 11px; font-weight: bold; color: #333; }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        .btn-generate { flex: 1; padding: 12px; font-size: 12px; font-weight: bold; color: #FFF; background-color: #2E7D32; border: 2px solid #000; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000; }
+        .btn-print-pdf { flex: 1; padding: 12px; font-size: 12px; font-weight: bold; color: #000; background-color: #03A9F4; border: 2px solid #000; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000; }
+        .btn-generate:active, .btn-print-pdf:active { transform: translate(2px, 2px); box-shadow: none; }
+        
+        .btn-edit-mode { width: 100%; padding: 10px; font-size: 12px; font-weight: bold; color: #000; background-color: #FFEB3B; border: 2px solid #000; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000; margin-bottom: 10px; transition: 0.2s;}
+        .btn-edit-mode.active { background-color: #D32F2F; color: #FFF; }
+
+        .btn-save { width: 100%; padding: 12px; font-size: 13px; font-weight: bold; color: #FFF; background-color: #000080; border: 2px solid #000; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000; display: none; margin-bottom: 10px;}
+        .btn-save:active { transform: translate(2px, 2px); box-shadow: none; }
+
+        .table-responsive { overflow-x: auto; margin-top: 10px; border: 2px solid #000; background: #FFF; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        th { background: #000080; color: #FFF; padding: 10px; border: 1px solid #000; text-transform: uppercase; }
+        td { padding: 10px; border: 1px solid #ddd; vertical-align: top; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .pic-profile { font-weight: bold; color: #111; }
+        .pic-sub { font-size: 10px; color: #666; margin-top: 2px; }
+        
+        .rack-tag { display: inline-flex; align-items: center; background: #E0E0E0; border: 1px solid #555; padding: 4px 6px; margin: 2px; border-radius: 4px; font-weight: bold; font-size: 12px; position: relative;}
+        .rack-info { display: flex; flex-direction: column; margin-right: 5px; }
+        .rack-tag small { font-size: 9px; color: #555; display: block; font-weight: normal;}
+
+        @keyframes shake { 0% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } 100% { transform: rotate(-2deg); } }
+        .edit-active .rack-tag { cursor: pointer; border: 2px dashed #D32F2F; animation: shake 0.5s infinite; }
+
+        .legend { font-size: 10px; display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; padding: 8px; background: #eee; border: 1px dashed #999; }
+        .legend-item { display: flex; align-items: center; gap: 4px; font-weight: bold; }
+        .color-box { width: 12px; height: 12px; border: 1px solid #000; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background-color: #FFF; border-top: 2px solid #000; display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); }
+        .nav-item { text-decoration: none; color: #555; font-size: 11px; display: flex; flex-direction: column; align-items: center; font-weight: bold; }
+        .nav-item.active { color: #000080; }
+        .nav-icon { font-size: 18px; margin-bottom: 2px; }
+
+        #loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 999; flex-direction: column; justify-content: center; align-items: center; color: #FFF; text-align: center; padding: 20px;}
+        .spinner { border: 6px solid #f3f3f3; border-top: 6px solid #D32F2F; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #edit-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 15px;}
+        .modal-content { background: #FFF; border: 3px solid #000; padding: 20px; width: 100%; max-width: 350px; box-shadow: 4px 4px 0px #000; }
+        .modal-content h3 { margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #D32F2F; padding-bottom: 5px; }
+        .modal-content select { width: 100%; padding: 10px; margin-bottom: 15px; border: 2px solid #000; font-weight: bold; }
+        .modal-btns { display: flex; gap: 10px; }
+        .btn-modal-save { flex:1; background: #2E7D32; color: #FFF; padding: 10px; font-weight: bold; border: 2px solid #000; }
+        .btn-modal-cancel { flex:1; background: #E0E0E0; color: #000; padding: 10px; font-weight: bold; border: 2px solid #000; }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <h3 id="loading-text" style="font-size: 16px;">Sistem mulai memindai...</h3>
+        <p style="font-size: 11px; margin-top: 8px; color: #CCC;">Membaca struktur lorong dan urutan rak</p>
+    </div>
+
+    <div id="edit-modal">
+        <div class="modal-content">
+            <h3>Pindahkan Rak <span id="edit-rak-kode" style="color:#D32F2F;"></span></h3>
+            <p style="font-size: 11px; margin-bottom: 5px;">Pilih PIC baru untuk rak ini:</p>
+            <select id="edit-pic-select"></select>
+            <div class="modal-btns">
+                <button class="btn-modal-cancel" id="btn-cancel-edit">Batal</button>
+                <button class="btn-modal-save" id="btn-save-edit">Pindahkan</button>
+            </div>
+        </div>
+    </div>
+
+    <header>ALOKSIPL KEBERSIHAN RAK</header>
+
+    <div class="container">
+        <div class="control-panel">
+            <div class="stats-box">
+                <div class="stat-card">
+                    <h3 id="stat-total-rak">0</h3>
+                    <p>TOTAL RAK</p>
+                </div>
+                <div class="stat-card">
+                    <h3 id="stat-total-pic">0</h3>
+                    <p>TOTAL PIC</p>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-generate" id="btn-run-generate">⚡ Mulai Analisa</button>
+                <button class="btn-print-pdf" id="btn-download-pdf">🖨️ Cetak Semua PDF</button>
+            </div>
+            
+            <button class="btn-edit-mode" id="btn-toggle-edit">Aktifkan Mode Edit Manual</button>
+            <button class="btn-save" id="btn-save-firebase">💾 Simpan Hasil Ke Database</button>
+        </div>
+
+        <div class="control-panel">
+            <h3 style="font-size: 14px; text-transform: uppercase; margin-bottom: 5px;">Indikator</h3>
+            
+            <div class="legend">
+                <div class="legend-item"><div class="color-box" style="background:#FFF9C4;"></div> AREA KASIR</div>
+                <div class="legend-item"><div class="color-box" style="background:#F8BBD0;"></div> PERSONALCARE</div>
+                <div class="legend-item"><div class="color-box" style="background:#BBDEFB;"></div> CHILLER</div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="alokasi-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">PIC NAME</th>
+                            <th style="width: 15%; text-align: center;">ALOKASI</th>
+                            <th>KODE RAK</th>
+                        </tr>
+                    </thead>
+                    <tbody id="allocation-table-body">
+                        <tr>
+                            <td colspan="3" style="text-align: center; padding: 20px; color: #666;">Data kosong. Silakan jalankan analisa.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="Beranda.html" class="nav-item"><span class="nav-icon">🏠</span>Beranda</a>
+        <a href="Tugas.html" class="nav-item"><span class="nav-icon">📝</span>Tugas</a>
+        <a href="Master.html" class="nav-item"><span class="nav-icon">⚙️</span>Master</a>
+        <a href="Alokasi.html" class="nav-item active"><span class="nav-icon">📊</span>Alokasi</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        // Pastikan jsPDF tersedia
+        const { jsPDF } = window.jspdf;
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
+            authDomain: "rak1-eabff.firebaseapp.com",
+            databaseURL: "https://rak1-eabff-default-rtdb.firebaseio.com",
+            projectId: "rak1-eabff",
+            storageBucket: "rak1-eabff.firebasestorage.app",
+            messagingSenderId: "422926040763",
+            appId: "1:422926040763:web:4ddf6163969a276d62f39e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let dataRak = [];
+        let dataPic = [];
+        let hasilAlokasiGlobal = [];
+        let isEditMode = false;
+        let selectedRakId = null;
+        let selectedOldPicId = null;
+
+        onValue(ref(db, 'rak'), (snapshot) => {
+            dataRak = [];
+            snapshot.forEach((child) => { dataRak.push({ id: child.key, ...child.val() }); });
+            document.getElementById('stat-total-rak').innerText = dataRak.length;
+        });
+
+        onValue(ref(db, 'pic'), (snapshot) => {
+            dataPic = [];
+            snapshot.forEach((child) => { dataPic.push({ id: child.key, ...child.val() }); });
+            document.getElementById('stat-total-pic').innerText = dataPic.length;
+        });
+
+        onValue(ref(db, 'alokasi'), (snapshot) => {
+            if (snapshot.exists()) {
+                hasilAlokasiGlobal = snapshot.val();
+                renderTabelAlokasi(hasilAlokasiGlobal);
+            }
+        });
+
+        // ==========================================
+        // ALGORITMA UTAMA (SAPU JALUR CHILLER)
+        // ==========================================
+        document.getElementById('btn-run-generate').addEventListener('click', () => {
+            if (dataPic.length === 0 || dataRak.length === 0) return alert("❌ Data PIC atau Rak kosong!");
+
+            const overlay = document.getElementById('loading-overlay');
+            const loadText = document.getElementById('loading-text');
+            overlay.style.display = 'flex';
+            loadText.innerText = "Mengkalkulasi Rata-rata & Target PIC...";
+
+            setTimeout(() => {
+                let baseQuota = Math.floor(dataRak.length / dataPic.length); 
+                let sisaRak = dataRak.length % dataPic.length; 
+                let listPic = dataPic.map(pic => ({ ...pic, assignedRacks: [], targetQuota: 0 }));
+                listPic.sort((a, b) => {
+                    let scoreA = (a.jabatan.toLowerCase() === 'kasir') ? 1 : (a.jenis_kelamin === 'P' ? 2 : 3);
+                    let scoreB = (b.jabatan.toLowerCase() === 'kasir') ? 1 : (b.jenis_kelamin === 'P' ? 2 : 3);
+                    return scoreA - scoreB;
+                });
+                listPic.forEach((pic, index) => { pic.targetQuota = baseQuota + (index < sisaRak ? 1 : 0); });
+
+                loadText.innerText = "Render Area Kasir & Lorong 1-5...";
+
+                setTimeout(() => {
+                    const getRankLorong = (lorong, kategori) => {
+                        const l = (lorong || '').toUpperCase();
+                        const k = (kategori || '').toUpperCase();
+                        if(l.includes('KASIR')) return 1;
+                        let match = l.match(/LORONG\s*(\d+)/);
+                        if(match) return parseInt(match[1]) + 1;
+                        if(l.includes('CHILLER') || k.includes('CHILLER')) return 90; 
+                        return 99;
+                    };
+
+                    let sortedRak = [...dataRak].sort((a, b) => {
+                        let rankA = getRankLorong(a.lorong, a.kategori_rak);
+                        let rankB = getRankLorong(b.lorong, b.kategori_rak);
+                        if (rankA !== rankB) return rankA - rankB; 
+                        return (a.kode_rak || '').localeCompare(b.kode_rak || '', undefined, {numeric: true});
+                    });
+
+                    loadText.innerText = "Memproses Area Chiller & Mengunci Aturan...";
+
+                    setTimeout(() => {
+                        let sweeperIndex = 0; 
+                        sortedRak.forEach(rak => {
+                            let kode = (rak.kode_rak || '').toUpperCase();
+                            let l = (rak.lorong || '').toUpperCase();
+                            let k = (rak.kategori_rak || '').toUpperCase();
+                            
+                            let isKasirOnly = kode.startsWith('MI') || kode.startsWith('FE') || kode.startsWith('HB') || kode.startsWith('GB') || kode.startsWith('GA');
+                            let isPerempuanOnly = kode.startsWith('KAU') || kode.startsWith('KU');
+                            let isLakiOnly = kode.startsWith('AU') || l.includes('CHILLER') || k.includes('CHILLER'); 
+
+                            const canHold = (pic) => {
+                                if (pic.assignedRacks.length >= pic.targetQuota) return false;
+                                if (isKasirOnly && pic.jabatan.toLowerCase() !== 'kasir') return false;
+                                if (isPerempuanOnly && pic.jenis_kelamin !== 'P') return false;
+                                if (isLakiOnly && pic.jenis_kelamin !== 'L') return false;
+                                return true;
+                            };
+
+                            while (sweeperIndex < listPic.length && listPic[sweeperIndex].assignedRacks.length >= listPic[sweeperIndex].targetQuota) {
+                                sweeperIndex++;
+                            }
+
+                            let targetPic = null;
+
+                            if (sweeperIndex < listPic.length) {
+                                let activeSweeper = listPic[sweeperIndex];
+                                if (canHold(activeSweeper)) {
+                                    targetPic = activeSweeper;
+                                } else {
+                                    let validAssistants = listPic.filter(p => canHold(p));
+                                    let sameLorongPic = validAssistants.find(p => p.assignedRacks.some(r => r.lorong === rak.lorong));
+                                    if (sameLorongPic) targetPic = sameLorongPic;
+                                    else if (validAssistants.length > 0) targetPic = validAssistants[0]; 
+                                }
+                            }
+
+                            if (!targetPic) targetPic = listPic.find(p => p.assignedRacks.length < p.targetQuota);
+                            if (!targetPic) targetPic = [...listPic].sort((a,b) => a.assignedRacks.length - b.assignedRacks.length)[0];
+
+                            targetPic.assignedRacks.push(rak);
+                        });
+
+                        listPic.forEach(p => {
+                            p.assignedRacks.sort((a,b) => {
+                                let rA = getRankLorong(a.lorong, a.kategori_rak);
+                                let rB = getRankLorong(b.lorong, b.kategori_rak);
+                                if(rA !== rB) return rA - rB;
+                                return (a.kode_rak || '').localeCompare(b.kode_rak || '', undefined, {numeric: true});
+                            });
+                        });
+
+                        hasilAlokasiGlobal = listPic;
+                        renderTabelAlokasi(hasilAlokasiGlobal);
+                        
+                        document.getElementById('btn-save-firebase').style.display = 'block';
+                        overlay.style.display = 'none';
+
+                    }, 2200); 
+                }, 3200); 
+            }, 2000); 
+        });
+
+        function renderTabelAlokasi(data) {
+            const tbody = document.getElementById('allocation-table-body');
+            tbody.innerHTML = '';
+            
+            let dataArray = Array.isArray(data) ? data : Object.values(data);
+
+            dataArray.forEach(pic => {
+                let htmlRacks = '';
+                if(pic.assignedRacks && pic.assignedRacks.length > 0) {
+                    pic.assignedRacks.forEach(rak => {
+                        let bgColor = '#E0E0E0';
+                        let kode = (rak.kode_rak || '').toUpperCase();
+                        let k = (rak.kategori_rak || '').toUpperCase();
+
+                        if(kode.startsWith('MI') || kode.startsWith('FE') || kode.startsWith('HB') || kode.startsWith('GB') || kode.startsWith('GA')) bgColor = '#FFF9C4'; 
+                        else if(kode.startsWith('KAU') || kode.startsWith('KU')) bgColor = '#F8BBD0'; 
+                        else if(kode.startsWith('AU') || k.includes('CHILLER')) bgColor = '#BBDEFB'; 
+                        
+                        htmlRacks += `
+                            <div class="rack-tag" style="background:${bgColor}">
+                                <div class="rack-info" data-rak-id="${rak.id}" data-pic-id="${pic.id}">
+                                    ${rak.kode_rak} <small>📍 ${rak.lorong || 'Belum Di-mapping'}</small>
+                                </div>
+                            </div>`;
+                    });
+                } else {
+                    htmlRacks = `<em style="color:#999;">Tugas Kosong</em>`;
+                }
+
+                let target = pic.targetQuota || 0;
+                let isFull = pic.assignedRacks.length === target;
+                let textColor = isFull ? '#2E7D32' : '#D32F2F';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div class="pic-profile">${pic.nama}</div>
+                        <div class="pic-sub">Role: ${pic.jabatan.toUpperCase()} (${pic.jenis_kelamin})</div>
+                        <div style="font-size: 10px; color: #000080; margin-top: 3px; font-weight: bold;">(Target: ${target} Rak)</div>
+                    </td>
+                    <td style="text-align:center; font-weight:bold; font-size:16px; background:#F5F5F5; color:${textColor}">
+                        ${pic.assignedRacks ? pic.assignedRacks.length : 0}
+                    </td>
+                    <td>${htmlRacks}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==========================================
+        // FITUR EDIT MANUAL
+        // ==========================================
+        const btnEditMode = document.getElementById('btn-toggle-edit');
+        const tableBody = document.getElementById('allocation-table-body');
+        const editModal = document.getElementById('edit-modal');
+        const selectPic = document.getElementById('edit-pic-select');
+
+        btnEditMode.addEventListener('click', () => {
+            isEditMode = !isEditMode;
+            if(isEditMode) {
+                btnEditMode.classList.add('active');
+                btnEditMode.innerText = "🛑 Matikan Mode Edit";
+                document.getElementById('alokasi-table').classList.add('edit-active');
+            } else {
+                btnEditMode.classList.remove('active');
+                btnEditMode.innerText = "✏️ Aktifkan Mode Edit Manual";
+                document.getElementById('alokasi-table').classList.remove('edit-active');
+            }
+        });
+
+        tableBody.addEventListener('click', (e) => {
+            if(!isEditMode) return;
+            let infoArea = e.target.closest('.rack-info');
+            if(!infoArea) return;
+
+            selectedRakId = infoArea.getAttribute('data-rak-id');
+            selectedOldPicId = infoArea.getAttribute('data-pic-id');
+            
+            let oldPic = hasilAlokasiGlobal.find(p => p.id === selectedOldPicId);
+            let rakObj = oldPic.assignedRacks.find(r => r.id === selectedRakId);
+            document.getElementById('edit-rak-kode').innerText = rakObj.kode_rak;
+
+            selectPic.innerHTML = '';
+            hasilAlokasiGlobal.forEach(pic => {
+                let option = document.createElement('option');
+                option.value = pic.id;
+                option.text = `${pic.nama} (${pic.assignedRacks.length} Rak)`;
+                if(pic.id === selectedOldPicId) option.selected = true;
+                selectPic.appendChild(option);
+            });
+
+            editModal.style.display = 'flex';
+        });
+
+        document.getElementById('btn-save-edit').addEventListener('click', () => {
+            let newPicId = selectPic.value;
+            if(newPicId === selectedOldPicId) { editModal.style.display = 'none'; return; }
+
+            let oldPicIndex = hasilAlokasiGlobal.findIndex(p => p.id === selectedOldPicId);
+            let rakIndex = hasilAlokasiGlobal[oldPicIndex].assignedRacks.findIndex(r => r.id === selectedRakId);
+            let rakObj = hasilAlokasiGlobal[oldPicIndex].assignedRacks.splice(rakIndex, 1)[0];
+
+            let newPicIndex = hasilAlokasiGlobal.findIndex(p => p.id === newPicId);
+            hasilAlokasiGlobal[newPicIndex].assignedRacks.push(rakObj);
+
+            renderTabelAlokasi(hasilAlokasiGlobal);
+            editModal.style.display = 'none';
+            document.getElementById('btn-save-firebase').style.display = 'block';
+        });
+
+        document.getElementById('btn-cancel-edit').addEventListener('click', () => { editModal.style.display = 'none'; });
+
+        // ==========================================
+        // CETAK SEMUA LABEL KE PDF (48x25mm Auto-Cut)
+        // ==========================================
+        document.getElementById('btn-download-pdf').addEventListener('click', () => {
+            if(hasilAlokasiGlobal.length === 0) return alert("Belum ada data! Silakan analisa atau simpan dulu.");
+            
+            // Inisialisasi Kertas PDF Thermal: Landscape, Milimeter, Ukuran 48x25
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: [48, 25] 
+            });
+
+            let isFirstPage = true;
+            let baseUrl = window.location.href.split('?')[0].replace('Alokasi.html', 'Tugas.html');
+
+            hasilAlokasiGlobal.forEach(pic => {
+                if(pic.assignedRacks && pic.assignedRacks.length > 0) {
+                    pic.assignedRacks.forEach(rak => {
+                        
+                        // Buat halaman baru, kecuali untuk label pertama
+                        if (!isFirstPage) {
+                            doc.addPage([48, 25], 'landscape');
+                        }
+                        isFirstPage = false;
+
+                        // 1. Buat Data URL QR Code
+                        const qrUrl = `${baseUrl}?id_rak=${rak.id}&pic=${pic.id}`;
+                        const qr = new QRious({
+                            value: qrUrl,
+                            size: 200,
+                            level: 'L'
+                        });
+                        const qrDataUrl = qr.toDataURL('image/jpeg');
+
+                        // 2. Pasang QR Code di PDF (X:2, Y:2.5, Width:20, Height:20)
+                        doc.addImage(qrDataUrl, 'JPEG', 2, 2.5, 20, 20);
+
+                        // 3. Tulis Teks Keterangan di Samping QR
+                        doc.setTextColor(0, 0, 0);
+                        
+                        // Kode Rak
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(13);
+                        doc.text(rak.kode_rak || 'RAK', 24, 7);
+
+                        // Lorong
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(7);
+                        let lorong = rak.lorong ? `Loc: ${rak.lorong}` : "Loc: -";
+                        doc.text(lorong, 24, 11);
+
+                        // Garis Pembatas Horizontal
+                        doc.setLineWidth(0.3);
+                        doc.line(24, 13, 46, 13);
+
+                        // Judul PIC
+                        doc.setFontSize(6);
+                        doc.text("PIC:", 24, 17);
+
+                        // Nama PIC
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(9);
+                        let picName = pic.nama.length > 15 ? pic.nama.substring(0, 15) + "..." : pic.nama;
+                        doc.text(picName, 24, 21);
+                        
+                    });
+                }
+            });
+
+            // Simpan / Download File PDF
+            doc.save("Label_Rak_Toko_48x25.pdf");
+        });
+
+        // ==========================================
+        // SIMPAN KE FIREBASE
+        // ==========================================
+        document.getElementById('btn-save-firebase').addEventListener('click', async () => {
+            if(hasilAlokasiGlobal.length === 0) return alert("Belum ada data untuk disimpan!");
+            if(confirm("Apakah Anda yakin ingin menetapkan alokasi ini ke database?")) {
+                try {
+                    await set(ref(db, 'alokasi'), hasilAlokasiGlobal);
+                    alert("💾 Jadwal tugas berhasil disimpan!");
+                    document.getElementById('btn-save-firebase').style.display = 'none';
+                    if(isEditMode) btnEditMode.click(); 
+                } catch (error) {
+                    alert("❌ Gagal menyimpan data: " + error.message);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

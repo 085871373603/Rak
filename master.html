@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Data - Kebersihan Rak</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #FFFFFF; color: #333; padding-bottom: 80px; }
+        header { background-color: #D32F2F; color: white; padding: 15px; text-align: center; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 100; }
+        .tab-menu { display: flex; background-color: #f5f5f5; border-bottom: 2px solid #ddd; }
+        .tab-btn { flex: 1; padding: 12px; text-align: center; background: none; border: none; font-weight: bold; color: #666; cursor: pointer; font-size: 14px; }
+        .tab-btn.active { color: #D32F2F; border-bottom: 3px solid #D32F2F; background-color: #fff; }
+        .tab-content { display: none; padding: 15px; }
+        .tab-content.active { display: block; }
+        .form-container { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .input-kapital { text-transform: uppercase; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .btn-submit { background-color: #2e7d32; color: white; margin-bottom: 5px; }
+        .btn-cancel { background-color: #757575; color: white; }
+        
+        /* Search Box Style */
+        .search-box { margin-bottom: 15px; }
+        .search-box input { border-color: #D32F2F; }
+
+        .data-list { margin-top: 10px; }
+        .data-item { background: #fff; border: 1px solid #ddd; padding: 12px; border-radius: 6px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .data-info h4 { font-size: 15px; color: #111; }
+        .data-info p { font-size: 12px; color: #666; margin-top: 2px; }
+        .action-btns { display: flex; gap: 5px; }
+        .btn-action { padding: 6px 10px; border: none; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-edit { background-color: #fbc02d; color: black; }
+        .btn-delete { background-color: #c62828; }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background-color: #FFFFFF; border-top: 1px solid #ddd; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 5px rgba(0,0,0,0.1); z-index: 100; }
+        .nav-item { text-decoration: none; color: #666; font-size: 12px; display: flex; flex-direction: column; align-items: center; font-weight: bold; }
+        .nav-item.active { color: #D32F2F; }
+        .nav-icon { font-size: 20px; margin-bottom: 3px; }
+    </style>
+</head>
+<body>
+
+    <header>Kelola Master Data</header>
+
+    <div class="tab-menu">
+        <button class="tab-btn active" onclick="switchTab('tab-pic', this)">Data PIC</button>
+        <button class="tab-btn" onclick="switchTab('tab-rak', this)">Data Rak</button>
+    </div>
+
+    <div id="tab-pic" class="tab-content active">
+        <div class="form-container">
+            <h3 id="form-pic-title" style="margin-bottom: 10px; font-size: 16px;">[+] Tambah PIC Baru</h3>
+            <input type="hidden" id="pic-id-edit">
+            
+            <div class="form-group">
+                <label>Nama PIC</label>
+                <input type="text" id="pic-nama" class="form-control input-kapital" placeholder="MASUKKAN NAMA KARYAWAN">
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Jabatan</label>
+                    <select id="pic-jabatan" class="form-control">
+                        <option value="pramu">Pramu</option>
+                        <option value="kasir">Kasir</option>
+                        <option value="staff">Staff</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Jenis Kelamin</label>
+                    <select id="pic-jk" class="form-control">
+                        <option value="L">Laki-Laki (L)</option>
+                        <option value="P">Perempuan (P)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-submit" id="btn-save-pic">Simpan Data PIC</button>
+            <button class="btn btn-cancel" id="btn-cancel-pic" style="display:none;">Batal</button>
+        </div>
+        <div class="data-list" id="list-pic"></div>
+    </div>
+
+    <div id="tab-rak" class="tab-content">
+        <div class="form-container">
+            <h3 id="form-rak-title" style="margin-bottom: 10px; font-size: 16px;">[+] Tambah Rak Baru</h3>
+            <input type="hidden" id="rak-id-edit">
+
+            <div class="form-group">
+                <label>Kode Rak</label>
+                <input type="text" id="rak-kode" class="form-control input-kapital" placeholder="CONTOH: RAK-01, GONDOLA-A">
+            </div>
+            <div class="form-group">
+                <label>Kategori Rak</label>
+                <select id="rak-kategori" class="form-control">
+                    <option value="">-- PILIH KATEGORI PRIMARY --</option>
+                    <option value="BABY MILK & DIAPERS">BABY MILK & DIAPERS</option>
+                    <option value="TP ELECTRIK">TP ELECTRIK</option>
+                    <option value="BISKUIT CONFECTIONARY">BISKUIT CONFECTIONARY</option>
+                    <option value="MEDICINE & BABY CARE">MEDICINE & BABY CARE</option>
+                    <option value="PET FOODS">PET FOODS</option>
+                    <option value="ALAT TULIS KANTOR">ALAT TULIS KANTOR</option>
+                    <option value="TISSUE">TISSUE</option>
+                    <option value="PERSONAL CARE">PERSONAL CARE</option>
+                    <option value="HOME CARE">HOME CARE</option>
+                    <option value="SANACK">SANACK</option>
+                    <option value="GONDOLA FOODS">GONDOLA FOODS</option>
+                    <option value="GONDOLA NONFOODS">GONDOLA NONFOODS</option>
+                    <option value="STAPLE NEEDS">STAPLE NEEDS</option>
+                    <option value="STAPLE NOODLE">STAPLE NOODLE</option>
+                    <option value="BEVERAGE">BEVERAGE</option>
+                    <option value="toys">TOYS</option>
+                    <option value="CHILLER">CHILLER</option>
+                    <option value="FROZEND FOODS">FROZEND FOODS</option>
+                    <option value="ADULT DIAPERS FEMININE">ADULT DIAPERS FEMININE</option>
+                    <option value="bebas">BEBAS</option>
+                </select>
+            </div>
+            <button class="btn btn-submit" id="btn-save-rak">Simpan Data Rak</button>
+            <button class="btn btn-cancel" id="btn-cancel-rak" style="display:none;">Batal</button>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="search-rak" class="form-control input-kapital" placeholder="🔍 Cari Kode atau Kategori Rak...">
+        </div>
+
+        <div class="data-list" id="list-rak"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="Beranda.html" class="nav-item">
+            <span class="nav-icon">🏠</span>Beranda
+        </a>
+        <a href="Master.html" class="nav-item active">
+            <span class="nav-icon">⚙️</span>Master
+        </a>
+        <a href="layout.html" class="nav-item"><span class="nav-icon">🗺️</span>Layout</a>
+        <a href="Alokasi.html" class="nav-item">
+            <span class="nav-icon">📊</span>Alokasi
+        </a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, remove, update, query, orderByChild, equalTo, get } 
+        from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
+            authDomain: "rak1-eabff.firebaseapp.com",
+            databaseURL: "https://rak1-eabff-default-rtdb.firebaseio.com",
+            projectId: "rak1-eabff",
+            storageBucket: "rak1-eabff.firebasestorage.app",
+            messagingSenderId: "422926040763",
+            appId: "1:422926040763:web:4ddf6163969a276d62f39e",
+            measurementId: "G-L3CXZM7P14"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.switchTab = function(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        // ================= CRUD: TABEL PIC =================
+        const picNamaInput = document.getElementById('pic-nama');
+        const picJabatanInput = document.getElementById('pic-jabatan');
+        const picJkInput = document.getElementById('pic-jk'); // Variabel JK baru
+        const picIdEdit = document.getElementById('pic-id-edit');
+        const btnSavePic = document.getElementById('btn-save-pic');
+        const btnCancelPic = document.getElementById('btn-cancel-pic');
+        const formPicTitle = document.getElementById('form-pic-title');
+        const listPicContainer = document.getElementById('list-pic');
+
+        btnSavePic.addEventListener('click', async () => {
+            const nama = picNamaInput.value.trim().toUpperCase();
+            const jabatan = picJabatanInput.value;
+            const jenis_kelamin = picJkInput.value; // Ambil nilai JK
+            const idEdit = picIdEdit.value;
+
+            if(!nama) return alert('Nama PIC tidak boleh kosong!');
+
+            try {
+                if(idEdit) {
+                    await update(ref(db, 'pic/' + idEdit), { nama, jabatan, jenis_kelamin });
+                } else {
+                    const newPicRef = push(ref(db, 'pic'));
+                    await set(newPicRef, { nama, jabatan, jenis_kelamin });
+                }
+                resetFormPIC();
+            } catch (error) {
+                alert("Error simpan PIC: " + error.message);
+            }
+        });
+
+        onValue(ref(db, 'pic'), (snapshot) => {
+            listPicContainer.innerHTML = '';
+            snapshot.forEach((childSnapshot) => {
+                const id = childSnapshot.key;
+                const pic = childSnapshot.val();
+                // Jika data lama belum ada JK, set default '-'
+                const jk = pic.jenis_kelamin ? pic.jenis_kelamin : '-'; 
+                
+                const item = document.createElement('div');
+                item.className = 'data-item';
+                item.innerHTML = `
+                    <div class="data-info">
+                        <h4>${pic.nama} (${jk})</h4>
+                        <p>Jabatan: ${pic.jabatan.toUpperCase()}</p>
+                    </div>
+                    <div class="action-btns">
+                        <button class="btn-action btn-edit" onclick="editPic('${id}', '${pic.nama}', '${pic.jabatan}', '${jk}')">Edit</button>
+                        <button class="btn-action btn-delete" onclick="deletePic('${id}')">Hapus</button>
+                    </div>
+                `;
+                listPicContainer.appendChild(item);
+            });
+        });
+
+        window.editPic = function(id, nama, jabatan, jk) {
+            picIdEdit.value = id;
+            picNamaInput.value = nama;
+            picJabatanInput.value = jabatan;
+            if(jk !== '-') picJkInput.value = jk; // Set nilai form JK
+            formPicTitle.innerText = "✏️ Edit Data PIC";
+            btnSavePic.innerText = "Update Data PIC";
+            btnCancelPic.style.display = "block";
+        }
+
+        window.deletePic = async function(id) {
+            if(confirm('Hapus data PIC ini?')) {
+                await remove(ref(db, 'pic/' + id));
+            }
+        }
+
+        btnCancelPic.addEventListener('click', resetFormPIC);
+        function resetFormPIC() {
+            picIdEdit.value = '';
+            picNamaInput.value = '';
+            picJabatanInput.value = 'pramu';
+            picJkInput.value = 'L'; // Reset JK ke default
+            formPicTitle.innerText = "[+] Tambah PIC Baru";
+            btnSavePic.innerText = "Simpan Data PIC";
+            btnCancelPic.style.display = "none";
+        }
+
+        // ================= CRUD & SEARCH: TABEL RAK =================
+        const rakKodeInput = document.getElementById('rak-kode');
+        const rakKategoriInput = document.getElementById('rak-kategori');
+        const rakIdEdit = document.getElementById('rak-id-edit');
+        const btnSaveRak = document.getElementById('btn-save-rak');
+        const btnCancelRak = document.getElementById('btn-cancel-rak');
+        const formRakTitle = document.getElementById('form-rak-title');
+        const listRakContainer = document.getElementById('list-rak');
+        const searchRakInput = document.getElementById('search-rak'); // Variabel Search Rak
+
+        // FUNGSI SEARCH (REALTIME FILTER)
+        searchRakInput.addEventListener('input', function() {
+            const filterText = this.value.toUpperCase();
+            const rakItems = listRakContainer.getElementsByClassName('data-item');
+            
+            for (let i = 0; i < rakItems.length; i++) {
+                const itemText = rakItems[i].textContent || rakItems[i].innerText;
+                if (itemText.toUpperCase().indexOf(filterText) > -1) {
+                    rakItems[i].style.display = ""; // Tampilkan jika cocok
+                } else {
+                    rakItems[i].style.display = "none"; // Sembunyikan jika tidak cocok
+                }
+            }
+        });
+
+        btnSaveRak.addEventListener('click', async () => {
+            const kode_rak = rakKodeInput.value.trim().toUpperCase();
+            const kategori_rak = rakKategoriInput.value;
+            const idEdit = rakIdEdit.value;
+
+            if(!kode_rak || !kategori_rak) return alert('Semua form rak wajib diisi/dipilih!');
+
+            try {
+                const q = query(ref(db, 'rak'), orderByChild('kode_rak'), equalTo(kode_rak));
+                const snapshot = await get(q);
+                
+                let sudahAda = false;
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnap) => {
+                        if (!idEdit || childSnap.key !== idEdit) { sudahAda = true; }
+                    });
+                }
+
+                if (sudahAda) {
+                    alert(`⚠️ INPUT DITOLAK!\nKode rak "${kode_rak}" sudah digunakan.`);
+                    return; 
+                }
+
+                if(idEdit) {
+                    await update(ref(db, 'rak/' + idEdit), { kode_rak, kategori_rak });
+                } else {
+                    const newRakRef = push(ref(db, 'rak'));
+                    await set(newRakRef, {
+                        kode_rak: kode_rak,
+                        kategori_rak: kategori_rak,
+                        status_rak: null,
+                        temuan: null
+                    });
+                }
+                resetFormRak();
+                searchRakInput.value = ''; // Reset kolom pencarian jika habis menyimpan
+            } catch (error) {
+                alert("Error simpan Rak: " + error.message);
+            }
+        });
+
+        onValue(ref(db, 'rak'), (snapshot) => {
+            listRakContainer.innerHTML = '';
+            snapshot.forEach((childSnapshot) => {
+                const id = childSnapshot.key;
+                const rak = childSnapshot.val();
+                const item = document.createElement('div');
+                item.className = 'data-item';
+                item.innerHTML = `
+                    <div class="data-info">
+                        <h4>${rak.kode_rak}</h4>
+                        <p>Kategori: ${rak.kategori_rak}</p>
+                    </div>
+                    <div class="action-btns">
+                        <button class="btn-action btn-edit" onclick="editRak('${id}', '${rak.kode_rak}', '${rak.kategori_rak}')">Edit</button>
+                        <button class="btn-action btn-delete" onclick="deleteRak('${id}')">Hapus</button>
+                    </div>
+                `;
+                listRakContainer.appendChild(item);
+            });
+            // Jalankan ulang fungsi filter jika ada text di kotak pencarian (biar kalau data baru masuk, filter tetap jalan)
+            searchRakInput.dispatchEvent(new Event('input')); 
+        });
+
+        window.editRak = function(id, kode, kategori) {
+            rakIdEdit.value = id;
+            rakKodeInput.value = kode;
+            rakKategoriInput.value = kategori;
+            formRakTitle.innerText = "✏️ Edit Data Rak";
+            btnSaveRak.innerText = "Update Data Rak";
+            btnCancelRak.style.display = "block";
+        }
+
+        window.deleteRak = async function(id) {
+            if(confirm('Hapus data rak ini?')) {
+                await remove(ref(db, 'rak/' + id));
+            }
+        }
+
+        btnCancelRak.addEventListener('click', resetFormRak);
+        function resetFormRak() {
+            rakIdEdit.value = '';
+            rakKodeInput.value = '';
+            rakKategoriInput.value = '';
+            formRakTitle.innerText = "[+] Tambah Rak Baru";
+            btnSaveRak.innerText = "Simpan Data Rak";
+            btnCancelRak.style.display = "none";
+        }
+    </script>
+</body>
+</html>

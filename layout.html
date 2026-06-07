@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapping Layout Store</title>
+    <style>
+        /* Desain Fungsional ala Sistem POS / Retro */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: #E0E0E0; color: #000; padding-bottom: 80px; }
+        
+        header { 
+            background-color: #000080; color: #FFF; padding: 15px; 
+            text-align: center; font-size: 16px; font-weight: bold; 
+            text-transform: uppercase; border-bottom: 4px solid #D32F2F; 
+            position: sticky; top: 0; z-index: 100; 
+        }
+
+        .container { padding: 15px; }
+
+        .control-panel {
+            background: #FFF; border: 2px solid #000; padding: 15px; 
+            margin-bottom: 15px; box-shadow: 2px 2px 0px #888;
+        }
+
+        .form-label { font-size: 13px; font-weight: bold; margin-bottom: 5px; display: block; color: #333; }
+        
+        .form-control { 
+            width: 100%; padding: 10px; border: 2px solid #000; font-size: 14px; 
+            font-weight: bold; background-color: #FFF9C4; margin-bottom: 10px;
+        }
+
+        .btn-action {
+            width: 100%; padding: 12px; font-size: 14px; font-weight: bold; color: #FFF;
+            background-color: #D32F2F; border: 2px solid #000; cursor: pointer;
+            text-transform: uppercase; box-shadow: 2px 2px 0px #000;
+        }
+        .btn-action:active { transform: translate(2px, 2px); box-shadow: none; }
+
+        /* List Rak Grid */
+        .rak-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; }
+        
+        .rak-item {
+            background: #FFF; border: 2px solid #555; padding: 10px; 
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .rak-item.has-lorong { border-left: 6px solid #2E7D32; }
+        .rak-item.no-lorong { border-left: 6px solid #D32F2F; }
+
+        .rak-info h4 { font-size: 16px; margin-bottom: 2px; }
+        .rak-info p { font-size: 11px; color: #555; margin-bottom: 4px; }
+        
+        .badge-lorong { 
+            display: inline-block; padding: 3px 6px; font-size: 10px; font-weight: bold;
+            color: #FFF; border-radius: 3px; 
+        }
+        .bg-navy { background: #000080; }
+        .bg-red { background: #D32F2F; }
+
+        .checkbox-container input { width: 22px; height: 22px; cursor: pointer; accent-color: #D32F2F; }
+
+        /* Navigasi Bawah */
+        .bottom-nav { 
+            position: fixed; bottom: 0; width: 100%; background-color: #FFF; 
+            border-top: 2px solid #000; display: flex; justify-content: space-around; 
+            padding: 10px 0; z-index: 100; box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        .nav-item { text-decoration: none; color: #555; font-size: 11px; display: flex; flex-direction: column; align-items: center; font-weight: bold; }
+        .nav-item.active { color: #000080; }
+        .nav-icon { font-size: 18px; margin-bottom: 2px; }
+
+        /* Tabel Map */
+        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+        th { background: #000080; color: #FFF; padding: 8px; border: 1px solid #ddd; }
+        td { padding: 8px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+    <header>Mapping Layout Store</header>
+
+    <div class="container">
+        <div class="control-panel">
+            <label class="form-label">1. PILIH AREA / LORONG TARGET:</label>
+            <select id="select-lorong" class="form-control">
+                <option value="">-- PILIH LORONG --</option>
+                <option value="LORONG 1">LORONG 1 </option>
+                <option value="LORONG 2">LORONG 2</option>
+                <option value="LORONG 3">LORONG 3</option>
+                <option value="LORONG 4">LORONG 4</option>
+                <option value="LORONG 5">LORONG 5 </option>
+                <option value="AREA KASIR">AREA KASIR</option>
+                <option value="CHILLER">CHILLER</option>
+            </select>
+            <button class="btn-action" id="btn-update-lorong">Simpan Rak ke Lorong</button>
+        </div>
+
+        <div class="control-panel">
+            <label class="form-label">2. PILIH RAK YANG MAU DIMASUKKAN:</label>
+            <input type="text" id="search-rak" class="form-control" placeholder="🔍 Cari Kode atau Kategori Rak...">
+            
+            <div style="margin-bottom: 5px; font-size: 13px; font-weight: bold; padding: 5px 0;">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check-all" style="width: 18px; height: 18px; accent-color: #D32F2F;"> 
+                    PILIH SEMUA HASIL FILTER
+                </label>
+            </div>
+
+            <div class="rak-grid" id="list-rak">
+                <div style="text-align:center; padding: 20px; font-size: 14px;">Memuat data rak...</div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <h3 style="margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">📊 Tabel Master Map Lorong</h3>
+            <div style="overflow-x: auto;">
+                <table id="map-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">KODE RAK</th>
+                            <th>LOKASI LORONG</th>
+                        </tr>
+                    </thead>
+                    <tbody id="map-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="Beranda.html" class="nav-item"><span class="nav-icon">🏠</span>Beranda</a>
+        <a href="master.html" class="nav-item"><span class="nav-icon">⚙️</span>Master</a>
+        <a href="Layout.html" class="nav-item active"><span class="nav-icon">🗺️</span>Layout</a>
+        <a href="alokasi.html" class="nav-item"><span class="nav-icon">📊</span>Alokasi</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
+            authDomain: "rak1-eabff.firebaseapp.com",
+            databaseURL: "https://rak1-eabff-default-rtdb.firebaseio.com",
+            projectId: "rak1-eabff",
+            storageBucket: "rak1-eabff.firebasestorage.app",
+            messagingSenderId: "422926040763",
+            appId: "1:422926040763:web:4ddf6163969a276d62f39e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const listRakContainer = document.getElementById('list-rak');
+        const mapTableBody = document.getElementById('map-table-body');
+        const searchRakInput = document.getElementById('search-rak');
+        const checkAllBtn = document.getElementById('check-all');
+        const btnUpdateLorong = document.getElementById('btn-update-lorong');
+        const selectLorong = document.getElementById('select-lorong');
+
+        // FUNGSI 1: AMBIL DATA DARI FIREBASE DAN TAMPILKAN
+        onValue(ref(db, 'rak'), (snapshot) => {
+            listRakContainer.innerHTML = '';
+            mapTableBody.innerHTML = '';
+            
+            let dataArray = [];
+            snapshot.forEach((childSnap) => {
+                dataArray.push({ id: childSnap.key, ...childSnap.val() });
+            });
+
+            // Urutkan: Rak yang belum punya lorong taruh di paling atas
+            dataArray.sort((a, b) => {
+                let statusA = a.lorong ? 1 : 0;
+                let statusB = b.lorong ? 1 : 0;
+                return statusA - statusB;
+            });
+
+            dataArray.forEach((rak) => {
+                const isMapped = rak.lorong ? true : false;
+                const namaLorong = isMapped ? rak.lorong : 'BELUM DIBAGI';
+                const statusClass = isMapped ? 'has-lorong' : 'no-lorong';
+                const badgeClass = isMapped ? 'bg-navy' : 'bg-red';
+
+                // Render ke Grid
+                const item = document.createElement('div');
+                item.className = `rak-item ${statusClass}`;
+                item.innerHTML = `
+                    <div class="rak-info">
+                        <h4>${rak.kode_rak}</h4>
+                        <p>${rak.kategori_rak}</p>
+                        <span class="badge-lorong ${badgeClass}">${namaLorong}</span>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" class="chk-rak" value="${rak.id}">
+                    </div>
+                `;
+                listRakContainer.appendChild(item);
+
+                // Render ke Tabel Map
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: bold;">${rak.kode_rak}</td>
+                    <td><span class="badge-lorong ${badgeClass}">${namaLorong}</span></td>
+                `;
+                mapTableBody.appendChild(tr);
+            });
+
+            // Jalankan ulang fungsi search jika input sedang tidak kosong saat data di-refresh
+            triggerSearch();
+        });
+
+        // FUNGSI 2: PENCARIAN REAL-TIME
+        function triggerSearch() {
+            const filterText = searchRakInput.value.toUpperCase();
+            const rakItems = listRakContainer.getElementsByClassName('rak-item');
+            
+            for (let i = 0; i < rakItems.length; i++) {
+                const teksRak = rakItems[i].innerText.toUpperCase();
+                if (teksRak.includes(filterText)) {
+                    rakItems[i].style.display = "flex";
+                } else {
+                    rakItems[i].style.display = "none";
+                    // Hilangkan centang jika item disembunyikan
+                    rakItems[i].querySelector('.chk-rak').checked = false; 
+                }
+            }
+            // Lepas centang 'Pilih Semua' tiap kali ngetik search baru
+            checkAllBtn.checked = false; 
+        }
+        searchRakInput.addEventListener('input', triggerSearch);
+
+        // FUNGSI 3: PILIH SEMUA (HANYA YANG TAMPIL DI LAYAR)
+        checkAllBtn.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const rakItems = listRakContainer.getElementsByClassName('rak-item');
+
+            for (let i = 0; i < rakItems.length; i++) {
+                if (rakItems[i].style.display !== "none") {
+                    rakItems[i].querySelector('.chk-rak').checked = isChecked;
+                }
+            }
+        });
+
+        // FUNGSI 4: PROSES UPDATE LORONG KE FIREBASE
+        btnUpdateLorong.addEventListener('click', async () => {
+            const lorongTarget = selectLorong.value;
+            if (!lorongTarget) return alert("⚠️ Mohon pilih Area/Lorong target terlebih dahulu!");
+
+            const checkboxes = listRakContainer.getElementsByClassName('chk-rak');
+            let updates = {};
+            let count = 0;
+
+            for (let chk of checkboxes) {
+                if (chk.checked) {
+                    updates['rak/' + chk.value + '/lorong'] = lorongTarget;
+                    count++;
+                }
+            }
+
+            if (count === 0) return alert("⚠️ Anda belum mencentang rak satupun!");
+
+            if(confirm(`Yakin ingin memasukkan ${count} rak ini ke ${lorongTarget}?`)) {
+                const originalText = btnUpdateLorong.innerText;
+                btnUpdateLorong.innerText = "MENYIMPAN DATA...";
+                btnUpdateLorong.style.backgroundColor = "#555";
+                
+                try {
+                    await update(ref(db), updates);
+                    alert(`✅ Sukses! ${count} rak berhasil diset ke ${lorongTarget}.`);
+                    
+                    // Reset Form setelah sukses
+                    selectLorong.value = "";
+                    searchRakInput.value = "";
+                    checkAllBtn.checked = false;
+                    triggerSearch(); // Reset tampilan grid
+                } catch (error) {
+                    alert("❌ Gagal menyimpan: " + error.message);
+                } finally {
+                    btnUpdateLorong.innerText = originalText;
+                    btnUpdateLorong.style.backgroundColor = "#D32F2F";
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
