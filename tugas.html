@@ -5,37 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Form Tugas Kebersihan Rak</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background-color: #f4f6f9; color: #333; padding: 15px; }
-        .container { background: #fff; max-width: 400px; margin: 0 auto; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background-color: #e51a23; color: white; padding: 20px; text-align: center; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
+        body { background-color: #E0E0E0; color: #000; padding: 15px; }
+        .container { background: #FFF; max-width: 400px; margin: 0 auto; border: 2px solid #000; box-shadow: 4px 4px 0px #888; overflow: hidden; }
+        .header { background-color: #000080; color: white; padding: 20px; text-align: center; border-bottom: 4px solid #D32F2F; }
         .header h1 { font-size: 2rem; margin-bottom: 5px; }
         .header p { font-size: 1rem; font-weight: bold; background: rgba(255,255,255,0.2); display: inline-block; padding: 4px 12px; border-radius: 20px; }
         .content { padding: 20px; }
         
-        /* Checkbox & Form */
-        .check-group { margin-bottom: 15px; background: #fdf6f6; padding: 12px; border-radius: 8px; border-left: 4px solid #e51a23; }
+        .check-group { margin-bottom: 15px; background: #FFF9C4; padding: 12px; border: 1px solid #000; box-shadow: 2px 2px 0px #000;}
         .check-group label { display: flex; align-items: flex-start; font-size: 0.95rem; line-height: 1.4; font-weight: bold; cursor: pointer; }
-        .check-group input[type="checkbox"] { margin-right: 10px; margin-top: 3px; transform: scale(1.3); accent-color: #e51a23; }
+        .check-group input[type="checkbox"] { margin-right: 10px; margin-top: 3px; transform: scale(1.3); accent-color: #D32F2F; }
         
         .form-group { margin-top: 20px; margin-bottom: 20px; }
-        .form-group h3 { font-size: 0.9rem; color: #555; margin-bottom: 10px; text-transform: uppercase; }
-        .input-field { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; font-size: 1rem; }
+        .form-group h3 { font-size: 0.9rem; color: #D32F2F; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;}
+        .input-field { width: 100%; padding: 12px; border: 2px solid #000; margin-bottom: 10px; font-size: 1rem; }
         textarea.input-field { resize: vertical; min-height: 80px; }
         
-        .reminder { background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; font-size: 0.9rem; text-align: center; font-weight: bold; border: 1px solid #ffeeba; margin-bottom: 20px; }
+        .reminder { background: #E0E0E0; color: #D32F2F; padding: 12px; font-size: 0.9rem; text-align: center; font-weight: bold; border: 2px dashed #D32F2F; margin-bottom: 20px; }
         
-        .btn-save { width: 100%; padding: 15px; background-color: #28a745; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-save:active { background-color: #218838; }
-        .btn-back { display: block; text-align: center; margin-top: 15px; color: #555; text-decoration: none; font-size: 0.9rem; }
+        .btn-save { width: 100%; padding: 15px; background-color: #2E7D32; color: white; border: 2px solid #000; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000;}
+        .btn-save:active { transform: translate(2px, 2px); box-shadow: none; }
+        .btn-back { display: block; text-align: center; margin-top: 15px; color: #000080; text-decoration: none; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1 id="kode-rak">--</h1>
-        <p>PIC: <span id="nama-pic">Memuat...</span></p>
+        <h1 id="kode-rak">MEMUAT...</h1>
+        <p>PIC: <span id="nama-pic">...</span></p>
     </div>
     
     <div class="content">
@@ -49,44 +48,65 @@
         <div class="form-group">
             <h3>Jika Ada Temuan (Opsional)</h3>
             <input type="text" id="temuan-item" class="input-field" placeholder="Nama Item (Contoh: Susu Beruang)">
-            <textarea id="temuan-deskripsi" class="input-field" placeholder="Deskripsi (Contoh: Kemasan penyok)"></textarea>
+            <textarea id="temuan-deskripsi" class="input-field" placeholder="Deskripsi (Contoh: Kemasan penyok/Expired)"></textarea>
         </div>
 
         <div class="reminder">
             ⚠️ Pastikan mengisi form ceklis kebersihan di map toko!
         </div>
 
-        <button class="btn-save" onclick="simpanTugas()">Simpan & Selesai</button>
-        <a href="alokasi.html" class="btn-back">Kembali ke Alokasi</a>
+        <button class="btn-save" id="btn-submit">Simpan & Selesai</button>
+        <a href="alokasi.html" class="btn-back">⬅ Kembali ke Alokasi</a>
     </div>
 </div>
 
-<script>
-    // Inisialisasi Database Lokal jika belum ada
-    if (!localStorage.getItem('dbRak')) {
-        const dataAwal = {
-            "GA1": { pic: "INTAN", lokasi: "AREA KASIR", lastCleaned: 0, temuan: "" },
-            "GB1": { pic: "INTAN", lokasi: "AREA KASIR", lastCleaned: 0, temuan: "" },
-            "GB2": { pic: "INTAN", lokasi: "AREA KASIR", lastCleaned: 0, temuan: "" }
-        };
-        localStorage.setItem('dbRak', JSON.stringify(dataAwal));
-    }
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-    const dbRak = JSON.parse(localStorage.getItem('dbRak'));
+    // Konfigurasi Firebase Anda
+    const firebaseConfig = {
+        apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
+        authDomain: "rak1-eabff.firebaseapp.com",
+        databaseURL: "https://rak1-eabff-default-rtdb.firebaseio.com",
+        projectId: "rak1-eabff",
+        storageBucket: "rak1-eabff.firebasestorage.app",
+        messagingSenderId: "422926040763",
+        appId: "1:422926040763:web:4ddf6163969a276d62f39e"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Ambil Parameter URL dari hasil Scan Barcode
     const urlParams = new URLSearchParams(window.location.search);
-    const idRak = urlParams.get('id');
+    const idRak = urlParams.get('id_rak');
+    const idPic = urlParams.get('pic');
 
-    // Tampilkan data ke layar
-    if (idRak && dbRak[idRak]) {
-        document.getElementById('kode-rak').innerText = idRak;
-        document.getElementById('nama-pic').innerText = dbRak[idRak].pic;
-    } else {
-        alert("Kode rak tidak ditemukan! Pastikan scan QR dengan benar.");
+    if (!idRak || !idPic) {
+        alert("Akses tidak valid. Pastikan scan dari QR Code resmi.");
         window.location.href = "alokasi.html";
     }
 
-    // Fungsi Simpan
-    function simpanTugas() {
+    // Tarik data Rak & PIC dari Firebase
+    get(ref(db, `rak/${idRak}`)).then((snapshot) => {
+        if(snapshot.exists()) {
+            document.getElementById('kode-rak').innerText = snapshot.val().kode_rak || idRak;
+        } else {
+            document.getElementById('kode-rak').innerText = idRak;
+        }
+    });
+
+    get(ref(db, `pic/${idPic}`)).then((snapshot) => {
+        if(snapshot.exists()) {
+            document.getElementById('nama-pic').innerText = snapshot.val().nama || idPic;
+        } else {
+            document.getElementById('nama-pic').innerText = "Tidak Diketahui";
+        }
+    });
+
+    // Proses Simpan
+    document.getElementById('btn-submit').addEventListener('click', async () => {
         const cekDebu = document.getElementById('cek-debu').checked;
         const cekExpired = document.getElementById('cek-expired').checked;
 
@@ -95,24 +115,32 @@
             return;
         }
 
-        const namaItem = document.getElementById('temuan-item').value;
-        const deskripsi = document.getElementById('temuan-deskripsi').value;
+        const btn = document.getElementById('btn-submit');
+        btn.innerText = "Menyimpan...";
+        btn.disabled = true;
+
+        const namaItem = document.getElementById('temuan-item').value.trim();
+        const deskripsi = document.getElementById('temuan-deskripsi').value.trim();
         let dataTemuan = "";
         
         if (namaItem || deskripsi) {
             dataTemuan = `${namaItem} - ${deskripsi}`;
         }
 
-        // Simpan waktu saat ini (timestamp dalam milidetik)
-        dbRak[idRak].lastCleaned = new Date().getTime();
-        dbRak[idRak].temuan = dataTemuan;
-
-        // Update ke LocalStorage
-        localStorage.setItem('dbRak', JSON.stringify(dbRak));
-
-        alert(`Data berhasil disimpan! Rak ${idRak} berstatus BERSIH selama 7 hari ke depan.`);
-        window.location.href = "alokasi.html"; // Otomatis kembali ke menu alokasi
-    }
+        // Simpan Last Cleaned dan Temuan ke node 'rak' di Firebase
+        try {
+            await update(ref(db, `rak/${idRak}`), {
+                lastCleaned: new Date().getTime(),
+                temuan: dataTemuan
+            });
+            alert("Data berhasil disimpan! Rak berstatus BERSIH selama 7 hari.");
+            window.location.href = "alokasi.html";
+        } catch (error) {
+            alert("Gagal menyimpan data: " + error.message);
+            btn.innerText = "Simpan & Selesai";
+            btn.disabled = false;
+        }
+    });
 </script>
 
 </body>
