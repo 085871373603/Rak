@@ -4,14 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Form Tugas Kebersihan Rak</title>
-
-    <script>
-        if (window.location.protocol === "http:") {
-            // Jika terdeteksi tidak aman, paksa pindah ke HTTPS beserta parameter QR-nya
-            window.location.replace("https://" + window.location.host + window.location.pathname + window.location.search);
-        }
-    </script>
-
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }
         body { background-color: #E0E0E0; color: #000; padding: 15px; }
@@ -71,10 +63,10 @@
                 <div class="temuan-row">
                     <div class="temuan-inputs">
                         <div class="input-row-flex">
-                            <input type="text" class="input-field t-item" placeholder="Nama Item (Cth: Chitato)" style="flex: 2;">
+                            <input type="text" class="input-field t-item" placeholder="Nama Item" style="flex: 2;">
                             <input type="number" class="input-field t-qty" placeholder="Qty" style="flex: 1;">
                         </div>
-                        <input type="text" class="input-field t-desc" placeholder="Deskripsi (Cth: Expired / Kemasan Bocor)">
+                        <input type="text" class="input-field t-desc" placeholder="Deskripsi">
                     </div>
                 </div>
             </div>
@@ -83,11 +75,11 @@
         </div>
 
         <div class="reminder">
-            ⚠️ Pastikan mengisi form ceklis kebersihan di map toko!
+            <h2>⚠️ </h2><br>Pastikan mengisi form ceklis kebersihan Rak di map Acco 6!
         </div>
 
-        <button class="btn-save" id="btn-submit">Simpan & Selesai</button>
-        <a href="index.html" class="btn-back">⬅ Kembali ke Beranda</a>
+        <button class="btn-save" id="btn-submit">SAVE</button>
+        <a href="index.html" class="btn-back">⬅ Kembali ke Menu Utama</a>
     </div>
 </div>
 
@@ -113,7 +105,7 @@
     const idPic = urlParams.get('pic');
 
     if (!idRak || !idPic) {
-        alert("Akses tidak valid. Pastikan scan dari QR Code resmi.");
+        alert("<h1>⚠️</h1><br>Gagal Memuat Halaman. Pindai Kode QR untuk mendapatkan Akses masuk yang Valid.");
         window.location.href = "index.html";
     }
 
@@ -133,6 +125,7 @@
         }
     });
 
+    // --- LOGIKA TAMBAH/HAPUS BARIS TEMUAN ---
     const temuanContainer = document.getElementById('temuan-container');
     const btnTambahTemuan = document.getElementById('btn-tambah-temuan');
 
@@ -150,6 +143,7 @@
             <button type="button" class="btn-remove-temuan">X</button>
         `;
         
+        // Fungsi hapus khusus baris ini
         row.querySelector('.btn-remove-temuan').addEventListener('click', function() {
             row.remove();
         });
@@ -157,6 +151,7 @@
         temuanContainer.appendChild(row);
     });
 
+    // --- PROSES SIMPAN KE FIREBASE ---
     document.getElementById('btn-submit').addEventListener('click', async () => {
         const cekDebu = document.getElementById('cek-debu').checked;
         const cekExpired = document.getElementById('cek-expired').checked;
@@ -170,6 +165,7 @@
         btn.innerText = "Menyimpan...";
         btn.disabled = true;
 
+        // Ambil data dari seluruh baris temuan
         let arrayTemuan = [];
         const barisTemuan = document.querySelectorAll('.temuan-row');
         
@@ -179,6 +175,7 @@
             const desc = baris.querySelector('.t-desc').value.trim();
 
             if (item || desc) {
+                // Format: [2] Chitato : Expired
                 let qtyTeks = qty ? `[${qty}] ` : '';
                 let namaTeks = item ? item : 'Barang Tanpa Nama';
                 let descTeks = desc ? ` : ${desc}` : '';
@@ -186,6 +183,7 @@
             }
         });
 
+        // Gabungkan seluruh item temuan jadi satu string dipisahkan garis vertikal " | "
         let stringDataTemuan = arrayTemuan.join(" | ");
 
         try {
@@ -193,8 +191,8 @@
                 lastCleaned: new Date().getTime(),
                 temuan: stringDataTemuan
             });
-            alert("✅ Tugas Selesai! Data kebersihan dan temuan berhasil disimpan.");
-            window.location.href = "index.html"; 
+            alert("✅ Tugas Selesai! Data berhasil disimpan.");
+            window.location.href = "index.html"; // Kembali ke dashboard
         } catch (error) {
             alert("❌ Gagal menyimpan data: " + error.message);
             btn.innerText = "Simpan & Selesai";
