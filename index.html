@@ -162,7 +162,7 @@
         <div class="summary-box">
             <div class="summary-card summary-kotor">
                 <h2 id="count-kotor">0</h2>
-                <p>Rak Kotor / Telat</p>
+                <p>Rak Kotor</p>
             </div>
             <div class="summary-card summary-bersih">
                 <h2 id="count-bersih">0</h2>
@@ -179,10 +179,10 @@
         <div class="modal-box">
             <div class="modal-header">⚠️ ZONA RAWAN EXPIRED</div>
             <div class="modal-body">
-                Rak <span id="modal-rak-kode" style="color: #D32F2F; font-size: 16px;"></span> masuk dalam kategori pergerakan barang sensitif.<br><br>
-                💡 <span style="color: #000080;">Instruksi Sistem:</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang NBH atau rusak yang luput dari pantauan!
+                Rak <span id="modal-rak-kode" style="color: #D32F2F; font-size: 16px;"></span> masuk dalam kategori Rawan Expired.<br><br>
+                💡 <span style="color: #000080;">Intruksi:</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang Expired atau rusak yang luput dari pantauan!
             </div>
-            <button class="modal-btn" onclick="tutupModal()">Siap, Laksanakan!</button>
+            <button class="modal-btn" onclick="tutupModal()">TUTUP</button>
         </div>
     </div>
 
@@ -303,7 +303,7 @@
                 picBody.className = 'pic-body';
 
                 // Render Rak Kotor (Prioritas Utama di Atas)
-                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor / Perlu Cek (${rakKotorPIC.length})</div>`;
+                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor (${rakKotorPIC.length})</div>`;
                 const layoutKotor = document.createElement('div');
                 layoutKotor.className = 'store-layout';
                 if (rakKotorPIC.length === 0) {
@@ -348,7 +348,7 @@
             let rawanHtml = '';
             if (rak.isRawan) {
                 // Tombol Peringatan Rawan
-                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">👁️ Cek Expired!</div>`;
+                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">⚠️️RAWAN</div>`;
             }
 
             card.innerHTML = `
