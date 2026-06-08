@@ -78,8 +78,8 @@
             ⚠️ Pastikan mengisi form ceklis kebersihan di map toko!
         </div>
 
-        <button class="btn-save" id="btn-submit">Simpan & Selesai</button>
-        <a href="alokasi.html" class="btn-back">⬅ Kembali ke Menu Utama</a>
+        <button class="btn-save" id="btn-submit">SAVE</button>
+        <a href="index.html" class="btn-back">⬅ Kembali ke Menu Utama</a>
     </div>
 </div>
 
@@ -105,7 +105,7 @@
     const idPic = urlParams.get('pic');
 
     if (!idRak || !idPic) {
-        alert("Akses tidak valid. Pastikan scan dari QR Code resmi.");
+        alert("⚠️Gagal Memuat Halaman. Pindai Kode QR untuk mendapatkan Akses masuk yang Valid.");
         window.location.href = "index.html";
     }
 
@@ -191,7 +191,7 @@
                 lastCleaned: new Date().getTime(),
                 temuan: stringDataTemuan
             });
-            alert("✅ Tugas Selesai! Data kebersihan dan temuan berhasil disimpan.");
+            alert("✅ Tugas Selesai! Data kebersihan berhasil disimpan.");
             window.location.href = "index.html"; // Kembali ke dashboard
         } catch (error) {
             alert("❌ Gagal menyimpan data: " + error.message);
