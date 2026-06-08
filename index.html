@@ -110,7 +110,7 @@
         <div class="summary-box">
             <div class="summary-card summary-kotor">
                 <h2 id="count-kotor">0</h2>
-                <p>Rak Kotor</p>
+                <p>Rak Kotor / Telat</p>
             </div>
             <div class="summary-card summary-bersih">
                 <h2 id="count-bersih">0</h2>
@@ -118,9 +118,9 @@
             </div>
         </div>
 
-        <div id="loading">Memuat status kebersihan...</div>
+        <div id="loading">Memuat status kebersihan live...</div>
 
-        <h3 class="section-title" style="color: #C62828;">🚨 Area Prioritas (Kotor)</h3>
+        <h3 class="section-title" style="color: #C62828;">🚨 Area Prioritas (Perlu Dibersihkan)</h3>
         <div class="store-layout" id="layout-kotor"></div>
 
         <h3 class="section-title" style="color: #2E7D32; margin-top: 25px;">✅ Area Aman (Bersih)</h3>
@@ -130,6 +130,7 @@
 
     <div class="bottom-nav">
         <a href="index.html" class="nav-item active"><span class="nav-icon">🏠</span>Beranda</a>
+        <a href="tugas.html" class="nav-item"><span class="nav-icon">📝</span>Tugas</a>
         <a href="master.html" class="nav-item"><span class="nav-icon">⚙️</span>Master</a>
         <a href="alokasi.html" class="nav-item"><span class="nav-icon">📊</span>Alokasi</a>
     </div>
@@ -145,6 +146,144 @@
             projectId: "rak1-eabff",
             storageBucket: "rak1-eabff.firebasestorage.app",
             messagingSenderId: "422926040763",
+            appId: "1:422926040763:web:4ddf6163969a276d62f39e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const layoutKotor = document.getElementById('layout-kotor');
+        const layoutBersih = document.getElementById('layout-bersih');
+        const loadingIndicator = document.getElementById('loading');
+
+        let dataRakLive = {};
+        let dataAlokasiGlobal = null;
+
+        // 1. Tarik Data Master Rak (Untuk cek lastCleaned secara realtime)
+        onValue(ref(db, 'rak'), (snapshot) => {
+            dataRakLive = {};
+            if (snapshot.exists()) {
+                snapshot.forEach(child => {
+                    dataRakLive[child.key] = child.val();
+                });
+            }
+            renderDashboard(); // Update tampilan tiap kali ada yang simpan tugas
+        });
+
+        // 2. Tarik Data Alokasi (Untuk mengetahui PIC masing-masing rak)
+        onValue(ref(db, 'alokasi'), (snapshot) => {
+            loadingIndicator.style.display = 'none';
+            if (snapshot.exists()) {
+                dataAlokasiGlobal = snapshot.val();
+            } else {
+                dataAlokasiGlobal = null;
+            }
+            renderDashboard();
+        }, (error) => {
+            console.error("Gagal mengambil data alokasi: ", error);
+            loadingIndicator.innerText = "Gagal memuat data alokasi.";
+        });
+
+        // Fungsi Render UI Dashboard
+        function renderDashboard() {
+            if (!dataAlokasiGlobal) {
+                layoutKotor.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:12px;">Belum ada jadwal alokasi.</p>';
+                layoutBersih.innerHTML = '';
+                return;
+            }
+
+            let rakKotor = [];
+            let rakBersih = [];
+            const WAKTU_SEKARANG = new Date().getTime();
+            const TUJUH_HARI_MS = 7 * 24 * 60 * 60 * 1000;
+
+            // Membongkar data alokasi PIC
+            Object.values(dataAlokasiGlobal).forEach(pic => {
+                if (pic.assignedRacks && pic.assignedRacks.length > 0) {
+                    pic.assignedRacks.forEach(assignedRak => {
+                        
+                        // Cek status kebersihan dari data live rak
+                        let liveRak = dataRakLive[assignedRak.id] || assignedRak;
+                        let isKotor = true;
+                        let infoWaktu = 'Waktunya Dibersihkan';
+
+                        // Jika lastCleaned ada dan selisihnya belum lewat 7 hari
+                        if (liveRak.lastCleaned && (WAKTU_SEKARANG - liveRak.lastCleaned) < TUJUH_HARI_MS) {
+                            isKotor = false;
+                            
+                            // Hitung sisa hari
+                            let sisaMs = (liveRak.lastCleaned + TUJUH_HARI_MS) - WAKTU_SEKARANG;
+                            let sisaHari = Math.ceil(sisaMs / (1000 * 60 * 60 * 24));
+                            infoWaktu = `Sisa ${sisaHari} Hari`;
+                        }
+
+                        // Buat objek untuk ditampilkan di card
+                        const rakObj = {
+                            id: assignedRak.id,
+                            kode_rak: liveRak.kode_rak || assignedRak.kode_rak,
+                            lorong: liveRak.lorong || assignedRak.lorong,
+                            nama_pic: pic.nama,
+                            infoWaktu: infoWaktu,
+                            temuan: liveRak.temuan || ""
+                        };
+
+                        if (isKotor) {
+                            rakKotor.push(rakObj);
+                        } else {
+                            rakBersih.push(rakObj);
+                        }
+                    });
+                }
+            });
+
+            // Update Widget Angka Dashboard
+            document.getElementById('count-kotor').innerText = rakKotor.length;
+            document.getElementById('count-bersih').innerText = rakBersih.length;
+
+            // Render Ulang Layout Kotor
+            layoutKotor.innerHTML = '';
+            if (rakKotor.length === 0) {
+                layoutKotor.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:11px;">Semua rak dalam keadaan bersih! 🎉</p>';
+            } else {
+                // Urutkan rak kotor berdasarkan abjad agar rapi
+                rakKotor.sort((a, b) => a.kode_rak.localeCompare(b.kode_rak));
+                rakKotor.forEach(rak => layoutKotor.appendChild(createRakCard(rak, 'bg-kotor')));
+            }
+
+            // Render Ulang Layout Bersih
+            layoutBersih.innerHTML = '';
+            if (rakBersih.length === 0) {
+                layoutBersih.innerHTML = '<p style="grid-column: span 2; text-align: center; color: #666; font-size:11px;">Belum ada rak yang dibersihkan.</p>';
+            } else {
+                rakBersih.sort((a, b) => a.kode_rak.localeCompare(b.kode_rak));
+                rakBersih.forEach(rak => layoutBersih.appendChild(createRakCard(rak, 'bg-bersih')));
+            }
+        }
+
+        // Fungsi pembuat elemen HTML Kartu Rak
+        function createRakCard(rak, statusClass) {
+            const card = document.createElement('div');
+            card.className = `rak-card ${statusClass}`;
+            
+            // Tambahkan alert temuan jika ada barang rusak/expired
+            let temuanHtml = '';
+            if (rak.temuan) {
+                temuanHtml = `<div style="font-size: 8px; margin-top: 4px; background: rgba(0,0,0,0.6); color: #FFF; padding: 2px; border-radius: 3px;">⚠️ ${rak.temuan}</div>`;
+            }
+
+            card.innerHTML = `
+                <div style="font-size: 15px;">${rak.kode_rak || 'Rak'}</div>
+                <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">📍 ${rak.lorong || '-'}</div>
+                ${temuanHtml}
+                <div class="pic-name">PIC: ${rak.nama_pic}</div>
+                <div class="timer-text">⏳ ${rak.infoWaktu}</div>
+            `;
+            return card;
+        }
+
+    </script>
+</body>
+</html>            messagingSenderId: "422926040763",
             appId: "1:422926040763:web:4ddf6163969a276d62f39e"
         };
 
