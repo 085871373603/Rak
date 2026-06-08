@@ -174,7 +174,7 @@
         <div class="summary-box">
             <div class="summary-card summary-kotor">
                 <h2 id="count-kotor">0</h2>
-                <p>Rak Kotor / Telat</p>
+                <p>Rak Kotor</p>
             </div>
             <div class="summary-card summary-bersih">
                 <h2 id="count-bersih">0</h2>
@@ -182,7 +182,7 @@
             </div>
         </div>
 
-        <div id="loading">Memuat status kebersihan live...</div>
+        <div id="loading">Memuat status kebersihan...</div>
 
         <!-- Wadah Utama yang akan di-render otomatis per PIC -->
         <div id="dashboard-container"></div>
@@ -194,9 +194,9 @@
             <div class="modal-header">⚠️ ZONA RAWAN EXPIRED</div>
             <div class="modal-body">
                 Rak <span id="modal-rak-kode" style="color: #D32F2F; font-size: 16px;"></span> masuk dalam kategori pergerakan barang sensitif.<br><br>
-                💡 <span style="color: #000080;">Instruksi Sistem:</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang NBH atau rusak yang luput dari pantauan!
+                💡 <span style="color: #000080;">Catatan :</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang Expired atau tidak layak jual yang luput dari pantauan!
             </div>
-            <button class="modal-btn" onclick="tutupModal()">Siap, Laksanakan!</button>
+            <button class="modal-btn" onclick="tutupModal()">Tutup</button>
         </div>
     </div>
 
@@ -275,7 +275,7 @@
                 pic.assignedRacks.forEach(assignedRak => {
                     let liveRak = dataRakLive[assignedRak.id] || assignedRak;
                     let isKotor = true;
-                    let infoWaktu = 'Waktunya Dibersihkan';
+                    let infoWaktu = 'Menunggu Tugas';
                     let tanggalBersihStr = 'Belum Ada Data';
                     
                     let kodeAsli = (liveRak.kode_rak || assignedRak.kode_rak || "").toUpperCase();
@@ -318,7 +318,7 @@
                 const totalRakPIC = rakKotorPIC.length + rakBersihPIC.length;
                 picSection.innerHTML = `
                     <div class="pic-header">
-                        <span>🧑‍💼 ${pic.nama}</span>
+                        <span> ${pic.nama}</span>
                         <span style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 12px;">Total: ${totalRakPIC} Rak</span>
                     </div>
                 `;
@@ -326,11 +326,11 @@
                 const picBody = document.createElement('div');
                 picBody.className = 'pic-body';
 
-                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor / Perlu Cek (${rakKotorPIC.length})</div>`;
+                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor (${rakKotorPIC.length})</div>`;
                 const layoutKotor = document.createElement('div');
                 layoutKotor.className = 'store-layout';
                 if (rakKotorPIC.length === 0) {
-                    layoutKotor.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #888; font-size:10px;">Hebat! Semua tugas bersih.</div>';
+                    layoutKotor.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #888; font-size:10px;">Semua Rak telah di bersihkan.</div>';
                 } else {
                     rakKotorPIC.sort((a, b) => a.kode_rak.localeCompare(b.kode_rak));
                     rakKotorPIC.forEach(rak => layoutKotor.appendChild(createRakCard(rak, 'bg-kotor')));
@@ -367,7 +367,7 @@
 
             let rawanHtml = '';
             if (rak.isRawan) {
-                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">👁️ Cek Expired!</div>`;
+                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">⚠️</div>`;
             }
 
             card.innerHTML = `
