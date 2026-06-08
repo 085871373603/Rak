@@ -17,11 +17,23 @@
         .check-group label { display: flex; align-items: flex-start; font-size: 0.95rem; line-height: 1.4; font-weight: bold; cursor: pointer; }
         .check-group input[type="checkbox"] { margin-right: 10px; margin-top: 3px; transform: scale(1.3); accent-color: #D32F2F; }
         
-        .form-group { margin-top: 20px; margin-bottom: 20px; }
-        .form-group h3 { font-size: 0.9rem; color: #D32F2F; margin-bottom: 10px; text-transform: uppercase; font-weight: bold;}
-        .input-field { width: 100%; padding: 12px; border: 2px solid #000; margin-bottom: 10px; font-size: 1rem; }
-        textarea.input-field { resize: vertical; min-height: 80px; }
+        /* Form Temuan Dinamis */
+        .form-group { margin-top: 20px; margin-bottom: 20px; background: #f9f9f9; padding: 10px; border: 2px dashed #888; border-radius: 6px; }
+        .form-group h3 { font-size: 0.9rem; color: #D32F2F; margin-bottom: 15px; text-transform: uppercase; font-weight: bold;}
         
+        .temuan-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: stretch; background: #fff; padding: 10px; border: 1px solid #ccc; border-radius: 4px; position: relative;}
+        .temuan-inputs { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .input-row-flex { display: flex; gap: 8px; }
+        
+        .input-field { width: 100%; padding: 10px; border: 2px solid #000; font-size: 0.9rem; border-radius: 4px; }
+        textarea.input-field { resize: vertical; min-height: 60px; }
+        
+        .btn-add-temuan { background: #000080; color: #FFF; border: 2px solid #000; padding: 8px; font-weight: bold; cursor: pointer; border-radius: 4px; width: 100%; margin-top: 5px; box-shadow: 2px 2px 0px #000; text-transform: uppercase; font-size: 0.85rem;}
+        .btn-add-temuan:active { transform: translate(2px, 2px); box-shadow: none; }
+        
+        .btn-remove-temuan { background: #D32F2F; color: #FFF; border: 2px solid #000; font-weight: bold; cursor: pointer; border-radius: 4px; padding: 0 12px; font-size: 1.2rem; }
+        .btn-remove-temuan:active { background: #B71C1C; }
+
         .reminder { background: #E0E0E0; color: #D32F2F; padding: 12px; font-size: 0.9rem; text-align: center; font-weight: bold; border: 2px dashed #D32F2F; margin-bottom: 20px; }
         
         .btn-save { width: 100%; padding: 15px; background-color: #2E7D32; color: white; border: 2px solid #000; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; box-shadow: 2px 2px 0px #000;}
@@ -47,8 +59,19 @@
 
         <div class="form-group">
             <h3>Jika Ada Temuan (Opsional)</h3>
-            <input type="text" id="temuan-item" class="input-field" placeholder="Nama Item (Contoh: Susu Beruang)">
-            <textarea id="temuan-deskripsi" class="input-field" placeholder="Deskripsi (Contoh: Kemasan penyok/Expired)"></textarea>
+            <div id="temuan-container">
+                <div class="temuan-row">
+                    <div class="temuan-inputs">
+                        <div class="input-row-flex">
+                            <input type="text" class="input-field t-item" placeholder="Nama Item (Cth: Chitato)" style="flex: 2;">
+                            <input type="number" class="input-field t-qty" placeholder="Qty" style="flex: 1;">
+                        </div>
+                        <input type="text" class="input-field t-desc" placeholder="Deskripsi (Cth: Expired / Kemasan Bocor)">
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" id="btn-tambah-temuan" class="btn-add-temuan">[+] Tambah Item Temuan</button>
         </div>
 
         <div class="reminder">
@@ -56,7 +79,7 @@
         </div>
 
         <button class="btn-save" id="btn-submit">Simpan & Selesai</button>
-        <a href="alokasi.html" class="btn-back">⬅ Kembali ke Alokasi</a>
+        <a href="alokasi.html" class="btn-back">⬅ Kembali ke Menu Utama</a>
     </div>
 </div>
 
@@ -64,7 +87,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getDatabase, ref, get, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-    // Konfigurasi Firebase Anda
     const firebaseConfig = {
         apiKey: "AIzaSyA9AU3aQeUHRM4GmCQPuEVu00K-VtnxGZo",
         authDomain: "rak1-eabff.firebaseapp.com",
@@ -78,17 +100,15 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Ambil Parameter URL dari hasil Scan Barcode
     const urlParams = new URLSearchParams(window.location.search);
     const idRak = urlParams.get('id_rak');
     const idPic = urlParams.get('pic');
 
     if (!idRak || !idPic) {
         alert("Akses tidak valid. Pastikan scan dari QR Code resmi.");
-        window.location.href = "alokasi.html";
+        window.location.href = "index.html";
     }
 
-    // Tarik data Rak & PIC dari Firebase
     get(ref(db, `rak/${idRak}`)).then((snapshot) => {
         if(snapshot.exists()) {
             document.getElementById('kode-rak').innerText = snapshot.val().kode_rak || idRak;
@@ -105,13 +125,39 @@
         }
     });
 
-    // Proses Simpan
+    // --- LOGIKA TAMBAH/HAPUS BARIS TEMUAN ---
+    const temuanContainer = document.getElementById('temuan-container');
+    const btnTambahTemuan = document.getElementById('btn-tambah-temuan');
+
+    btnTambahTemuan.addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'temuan-row';
+        row.innerHTML = `
+            <div class="temuan-inputs">
+                <div class="input-row-flex">
+                    <input type="text" class="input-field t-item" placeholder="Nama Item" style="flex: 2;">
+                    <input type="number" class="input-field t-qty" placeholder="Qty" style="flex: 1;">
+                </div>
+                <input type="text" class="input-field t-desc" placeholder="Deskripsi">
+            </div>
+            <button type="button" class="btn-remove-temuan">X</button>
+        `;
+        
+        // Fungsi hapus khusus baris ini
+        row.querySelector('.btn-remove-temuan').addEventListener('click', function() {
+            row.remove();
+        });
+
+        temuanContainer.appendChild(row);
+    });
+
+    // --- PROSES SIMPAN KE FIREBASE ---
     document.getElementById('btn-submit').addEventListener('click', async () => {
         const cekDebu = document.getElementById('cek-debu').checked;
         const cekExpired = document.getElementById('cek-expired').checked;
 
         if (!cekDebu || !cekExpired) {
-            alert("Harap centang semua tugas kebersihan terlebih dahulu!");
+            alert("Harap centang semua tugas kebersihan (Debu & Expired) terlebih dahulu!");
             return;
         }
 
@@ -119,24 +165,36 @@
         btn.innerText = "Menyimpan...";
         btn.disabled = true;
 
-        const namaItem = document.getElementById('temuan-item').value.trim();
-        const deskripsi = document.getElementById('temuan-deskripsi').value.trim();
-        let dataTemuan = "";
+        // Ambil data dari seluruh baris temuan
+        let arrayTemuan = [];
+        const barisTemuan = document.querySelectorAll('.temuan-row');
         
-        if (namaItem || deskripsi) {
-            dataTemuan = `${namaItem} - ${deskripsi}`;
-        }
+        barisTemuan.forEach(baris => {
+            const item = baris.querySelector('.t-item').value.trim();
+            const qty = baris.querySelector('.t-qty').value.trim();
+            const desc = baris.querySelector('.t-desc').value.trim();
 
-        // Simpan Last Cleaned dan Temuan ke node 'rak' di Firebase
+            if (item || desc) {
+                // Format: [2] Chitato : Expired
+                let qtyTeks = qty ? `[${qty}] ` : '';
+                let namaTeks = item ? item : 'Barang Tanpa Nama';
+                let descTeks = desc ? ` : ${desc}` : '';
+                arrayTemuan.push(`${qtyTeks}${namaTeks}${descTeks}`);
+            }
+        });
+
+        // Gabungkan seluruh item temuan jadi satu string dipisahkan garis vertikal " | "
+        let stringDataTemuan = arrayTemuan.join(" | ");
+
         try {
             await update(ref(db, `rak/${idRak}`), {
                 lastCleaned: new Date().getTime(),
-                temuan: dataTemuan
+                temuan: stringDataTemuan
             });
-            alert("Data berhasil disimpan! Rak berstatus BERSIH selama 7 hari.");
-            window.location.href = "alokasi.html";
+            alert("✅ Tugas Selesai! Data kebersihan dan temuan berhasil disimpan.");
+            window.location.href = "index.html"; // Kembali ke dashboard
         } catch (error) {
-            alert("Gagal menyimpan data: " + error.message);
+            alert("❌ Gagal menyimpan data: " + error.message);
             btn.innerText = "Simpan & Selesai";
             btn.disabled = false;
         }
