@@ -439,7 +439,8 @@
             });
 
             let isFirstPage = true;
-            let baseUrl = window.location.href.split('?')[0].replace('alokasi.html', 'tugas.html');
+// Kunci mati link selalu pakai HTTPS agar QR Code tidak bisa salah
+let baseUrl = "https://085871373603.github.io/Rak/tugas.html";
 
             hasilAlokasiGlobal.forEach(pic => {
                 if(pic.assignedRacks && pic.assignedRacks.length > 0) {
