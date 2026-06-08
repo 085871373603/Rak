@@ -85,11 +85,22 @@
 
         .rak-card .timer-text {
             font-size: 9px;
-            margin-top: 5px;
             background: rgba(0,0,0,0.3);
             display: inline-block;
             padding: 2px 6px;
             border-radius: 10px;
+            margin-top: 4px;
+        }
+
+        .rak-card .date-badge {
+            font-size: 8px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.2);
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 4px;
+            margin-top: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
         }
 
         /* Peringatan Rawan Expired Animasi */
@@ -159,10 +170,11 @@
     <header>Dashboard Monitoring</header>
 
     <div class="container">
+        <!-- Widget Global -->
         <div class="summary-box">
             <div class="summary-card summary-kotor">
                 <h2 id="count-kotor">0</h2>
-                <p>Rak Kotor</p>
+                <p>Rak Kotor / Telat</p>
             </div>
             <div class="summary-card summary-bersih">
                 <h2 id="count-bersih">0</h2>
@@ -172,17 +184,19 @@
 
         <div id="loading">Memuat status kebersihan live...</div>
 
+        <!-- Wadah Utama yang akan di-render otomatis per PIC -->
         <div id="dashboard-container"></div>
     </div>
 
+    <!-- Smart Pop-Up Modal -->
     <div id="smart-modal">
         <div class="modal-box">
             <div class="modal-header">⚠️ ZONA RAWAN EXPIRED</div>
             <div class="modal-body">
-                Rak <span id="modal-rak-kode" style="color: #D32F2F; font-size: 16px;"></span> masuk dalam kategori Rawan Expired.<br><br>
-                💡 <span style="color: #000080;">Intruksi:</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang Expired atau rusak yang luput dari pantauan!
+                Rak <span id="modal-rak-kode" style="color: #D32F2F; font-size: 16px;"></span> masuk dalam kategori pergerakan barang sensitif.<br><br>
+                💡 <span style="color: #000080;">Instruksi Sistem:</span><br>Harap lakukan pengecekan tanggal kedaluwarsa (Expired Date) dengan teliti menggunakan metode <strong>FEFO</strong>. Pastikan tidak ada barang NBH atau rusak yang luput dari pantauan!
             </div>
-            <button class="modal-btn" onclick="tutupModal()">TUTUP</button>
+            <button class="modal-btn" onclick="tutupModal()">Siap, Laksanakan!</button>
         </div>
     </div>
 
@@ -213,13 +227,13 @@
         const containerUtama = document.getElementById('dashboard-container');
         const loadingIndicator = document.getElementById('loading');
 
-        // DAFTAR RAK RAWAN EXPIRED (Sesuai Data Spesial)
+        // DAFTAR RAK RAWAN EXPIRED
         const KODE_RAWAN_EXPIRED = ["FE3","FE4","FE5","FE6","FE7","NV1","NV2","AT1","EI4","EI5","EI6"];
 
         let dataRakLive = {};
         let dataAlokasiGlobal = null;
 
-        // Tarik Data Master Rak (Realtime Kebersihan)
+        // Tarik Data Master Rak
         onValue(ref(db, 'rak'), (snapshot) => {
             dataRakLive = {};
             if (snapshot.exists()) {
@@ -228,7 +242,7 @@
             renderDashboard();
         });
 
-        // Tarik Data Alokasi (Kepemilikan PIC)
+        // Tarik Data Alokasi PIC
         onValue(ref(db, 'alokasi'), (snapshot) => {
             loadingIndicator.style.display = 'none';
             if (snapshot.exists()) {
@@ -250,34 +264,46 @@
             const WAKTU_SEKARANG = new Date().getTime();
             const TUJUH_HARI_MS = 7 * 24 * 60 * 60 * 1000;
 
-            containerUtama.innerHTML = ''; // Bersihkan kontainer utama
+            containerUtama.innerHTML = '';
 
-            // Loop untuk membuat blok per PIC
             Object.values(dataAlokasiGlobal).forEach(pic => {
                 if (!pic.assignedRacks || pic.assignedRacks.length === 0) return;
 
                 let rakKotorPIC = [];
                 let rakBersihPIC = [];
 
-                // Klasifikasi Rak per PIC
                 pic.assignedRacks.forEach(assignedRak => {
                     let liveRak = dataRakLive[assignedRak.id] || assignedRak;
                     let isKotor = true;
                     let infoWaktu = 'Waktunya Dibersihkan';
+                    let tanggalBersihStr = 'Belum Ada Data';
+                    
                     let kodeAsli = (liveRak.kode_rak || assignedRak.kode_rak || "").toUpperCase();
                     let isRawan = KODE_RAWAN_EXPIRED.includes(kodeAsli);
 
-                    if (liveRak.lastCleaned && (WAKTU_SEKARANG - liveRak.lastCleaned) < TUJUH_HARI_MS) {
-                        isKotor = false;
-                        let sisaMs = (liveRak.lastCleaned + TUJUH_HARI_MS) - WAKTU_SEKARANG;
-                        let sisaHari = Math.ceil(sisaMs / (1000 * 60 * 60 * 24));
-                        infoWaktu = `Sisa ${sisaHari} Hari`;
+                    // Konversi Waktu dan Format Tanggal
+                    if (liveRak.lastCleaned) {
+                        // Membuat format tanggal (DD/MM/YYYY)
+                        let dateObj = new Date(liveRak.lastCleaned);
+                        let hari = String(dateObj.getDate()).padStart(2, '0');
+                        let bulan = String(dateObj.getMonth() + 1).padStart(2, '0'); // Bulan dimulai dari 0
+                        let tahun = dateObj.getFullYear();
+                        tanggalBersihStr = `${hari}/${bulan}/${tahun}`;
+
+                        // Mengecek apakah masih dalam masa garansi kebersihan (7 hari)
+                        if ((WAKTU_SEKARANG - liveRak.lastCleaned) < TUJUH_HARI_MS) {
+                            isKotor = false;
+                            let sisaMs = (liveRak.lastCleaned + TUJUH_HARI_MS) - WAKTU_SEKARANG;
+                            let sisaHari = Math.ceil(sisaMs / (1000 * 60 * 60 * 24));
+                            infoWaktu = `Sisa ${sisaHari} Hari`;
+                        }
                     }
 
                     const rakObj = {
                         kode_rak: kodeAsli,
                         lorong: liveRak.lorong || assignedRak.lorong,
                         infoWaktu: infoWaktu,
+                        tglBersih: tanggalBersihStr, // <= Data tanggal dikirim ke sini
                         temuan: liveRak.temuan || "",
                         isRawan: isRawan
                     };
@@ -286,11 +312,9 @@
                     else { rakBersihPIC.push(rakObj); totalBersih++; }
                 });
 
-                // --- MEMBANGUN ELEMEN UI PER PIC ---
                 const picSection = document.createElement('div');
                 picSection.className = 'pic-section';
 
-                // Header PIC
                 const totalRakPIC = rakKotorPIC.length + rakBersihPIC.length;
                 picSection.innerHTML = `
                     <div class="pic-header">
@@ -302,8 +326,7 @@
                 const picBody = document.createElement('div');
                 picBody.className = 'pic-body';
 
-                // Render Rak Kotor (Prioritas Utama di Atas)
-                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor (${rakKotorPIC.length})</div>`;
+                picBody.innerHTML += `<div class="status-title" style="color: #C62828;">🚨 Rak Kotor / Perlu Cek (${rakKotorPIC.length})</div>`;
                 const layoutKotor = document.createElement('div');
                 layoutKotor.className = 'store-layout';
                 if (rakKotorPIC.length === 0) {
@@ -314,7 +337,6 @@
                 }
                 picBody.appendChild(layoutKotor);
 
-                // Render Rak Bersih (Di Bawahnya)
                 picBody.innerHTML += `<div class="status-title" style="color: #2E7D32;">✅ Rak Bersih (${rakBersihPIC.length})</div>`;
                 const layoutBersih = document.createElement('div');
                 layoutBersih.className = 'store-layout';
@@ -330,39 +352,41 @@
                 containerUtama.appendChild(picSection);
             });
 
-            // Update Total Global
             document.getElementById('count-kotor').innerText = totalKotor;
             document.getElementById('count-bersih').innerText = totalBersih;
         }
 
-        // Fungsi Pembuat Kartu & Logika Peringatan
         function createRakCard(rak, statusClass) {
             const card = document.createElement('div');
             card.className = `rak-card ${statusClass}`;
             
             let temuanHtml = '';
             if (rak.temuan) {
-                temuanHtml = `<div style="font-size: 8px; margin-top: 4px; background: rgba(0,0,0,0.6); color: #FFF; padding: 2px; border-radius: 3px;">⚠️ ${rak.temuan}</div>`;
+                temuanHtml = `<div style="font-size: 8px; margin-top: 4px; background: rgba(0,0,0,0.6); color: #FFF; padding: 4px; border-radius: 4px;">⚠️ ${rak.temuan}</div>`;
             }
 
             let rawanHtml = '';
             if (rak.isRawan) {
-                // Tombol Peringatan Rawan
-                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">⚠️️RAWAN</div>`;
+                rawanHtml = `<div class="badge-warning" onclick="bukaPeringatan('${rak.kode_rak}')">👁️ Cek Expired!</div>`;
             }
 
             card.innerHTML = `
                 <div style="font-size: 16px;">${rak.kode_rak || 'Rak'}</div>
                 <div style="font-size: 9px; font-weight: normal; margin-top: 2px;">📍 ${rak.lorong || '-'}</div>
+                
+                <!-- Indikator Tanggal -->
+                <div class="date-badge">🗓️ ${rak.tglBersih}</div>
+                
                 ${temuanHtml}
-                <div class="timer-text">⏳ ${rak.infoWaktu}</div>
-                <br>
+                
+                <div>
+                    <div class="timer-text">⏳ ${rak.infoWaktu}</div>
+                </div>
                 ${rawanHtml}
             `;
             return card;
         }
 
-        // --- SISTEM MODAL POP-UP ---
         window.bukaPeringatan = function(kodeRak) {
             document.getElementById('modal-rak-kode').innerText = kodeRak;
             document.getElementById('smart-modal').style.display = 'flex';
